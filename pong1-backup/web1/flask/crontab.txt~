@@ -1,0 +1,13 @@
+#* * * * * /usr/bin/python3 ~/cointegration/connecttodb.py
+#record the currency exchange rate every 15 mins
+#*/15 * * * * /usr/bin/python3 ~/public_html/flask/getdata.py DE30_EUR,EUR_USD,EUR_JPY
+#calculate cointegration every 15 mins. if p-value < 0.05 ==> insert in the database
+#*/15 * * * * /usr/bin/python3 ~/public_html/flask/calcoint.py DE30_EUR EUR_JPY 6000 0.05
+#*/15 * * * * /usr/bin/python3 ~/public_html/flask/calcoint.py DE30_EUR EUR_USD 6000 0.05
+#*/15 * * * * /usr/bin/python3 ~/public_html/flask/calcoint.py EUR_JPY EUR_USD 6000 0.05
+#make a forecast and create a chart
+#*/15 * * * * /usr/bin/python3 ~/public_html/flask/forecast.py
+
+
+
+gcloud compute scp ~/GCP/pong1-backup/web1/* piyapong@cointegration:~/public_html/ --recurse
