@@ -1,11 +1,10 @@
-from flask import Flask, request 
+from flask import Flask, request, url_for
 import re
-import template
-import connecttodb
+import web.template as template
+import src.lib.connecttodb as connecttodb
 
 app = Flask(__name__)
 
-from flask import Flask, url_for
 
 @app.route('/test', methods=['POST'])
 def test():

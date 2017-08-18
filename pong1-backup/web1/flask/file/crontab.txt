@@ -10,5 +10,5 @@
 */15 * * * * /usr/bin/python3 ~/public_html/flask/forecast.py
 
 
-
+# flush Piyapong computer to VM
 gcloud compute scp ~/GCP/pong1-backup/web1/* piyapong@cointegration:~/public_html/ --recurse

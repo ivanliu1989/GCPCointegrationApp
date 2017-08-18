@@ -1,3 +1,0 @@
-import connecttodb
-
-connecttodb.savefile()
