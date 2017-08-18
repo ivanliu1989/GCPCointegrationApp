@@ -1,53 +1,11 @@
-from flask import Flask, request, url_for, Response
+from flask import Flask, request, url_for
 import re
 import web.template as template
 import src.lib.connecttodb as connecttodb
-import src.lib.getpair as getpair
-import pygal
-from datetime import datetime
-import pandas
 
 app = Flask(__name__)
 
-@app.route('/chart')
-def chart():
-	graph = creategraph()
-	return Response(response=graph.render(), content_type='image/svg+xml')
 
-def creategraph():
-	#graph = pygal.XY(stroke_style={'width': 2},spacing=0,width=15000,height=400)
-	#graph.title = '% Change Coolness of programming languages over time.'
-	
-	kind = 'DE30_EUR'
-	df = getpair.getalldata(kind)
-
-	tuples = [tuple(x) for x in df[['time',kind]].values]
-	graph = pygal.DateTimeLine(
-	    x_label_rotation=35, truncate_label=-1,spacing=0,width=30000,height=1000,
-	    x_value_formatter=lambda dt: dt.strftime('%I:%M:%S %p'))
-	graph.add(kind, tuples, show_dots=False)
-	
-	dfforecast = pandas.DataFrame(connecttodb.selectforecast(kind))
-	
-	dfdown = dfforecast[dfforecast['predict']=='down']
-	dfdown['c'] = 12600
-	tuples2 = [tuple(x) for x in dfdown[['time','c']].values]
-	graph.add('down', tuples2, show_dots=True, dots_size=4, stroke=False)
-	
-	dfup = dfforecast[dfforecast['predict']=='up']
-	dfup['c'] = 12800
-	tuples3 = [tuple(x) for x in dfup[['time','c']].values]
-	graph.add('up', tuples3, show_dots=True, dots_size=4, stroke=False)
-	#timelist = dfforecast['time'].values.tolist()
-	#valuelist = dfforecast['instrument'].values.tolist()
-	#graph.x_labels = map(lambda d: d.strftime('%Y-%m-%d %H:%M:%S'),timelist)
-	#graph.add(kind, valuelist, show_dots=False)
-	#graph.add(kind, [(timelist[x],valuelist[x]) for x in range(len(valuelist))], show_dots=True)
-	#graph.add('cointegrated',[(timelist[5],valuelist[5]),(timelist[15],valuelist[15]),(timelist[25],valuelist[25])], show_dots=True, dots_size=4, stroke=False)
-	
-	
-	
-	return graph
 @app.route('/test', methods=['POST'])
 def test():
 	if request.method == 'POST':
@@ -61,13 +19,13 @@ def getdata():
 		itemfrom = ''+request.form['itemfrom']
 		length = ''+request.form['length']
 		return createtable(itemfrom,length)
-
-@app.route('/')	
+@app.route('/')
+	
+	
 def hello_world():
    body = template.getbodytemplate()
    body = body.replace('%tabnum',createbar())
    body = body.replace('%table',createtable(0,50))
-
    return body
 
 def createbar():

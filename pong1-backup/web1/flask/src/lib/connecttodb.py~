@@ -110,7 +110,7 @@ def selectforecast(kind):
 
 
 	for (instrument,dateto,predict) in cur:
-		list.append({'instrument':instrument,'time':dateto.timestamp() ,'predict':predict})
+		list.append({'instrument':instrument,'time':dateto.strftime("%Y-%m-%d %H:%M:%S"),'predict':predict})
 		#print(instrument1)
 	cur.close()
 	cnx.close()

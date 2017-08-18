@@ -41,7 +41,7 @@ def getalldata(kind):
 
     for i in tasks:
         value.append(i['closeoutBid'])
-        time.append(i['time'].timestamp())
+        time.append(i['time'].strftime("%Y-%m-%d %H:%M:%S"))
     df = pandas.DataFrame({'time':time,kind: value})
     df = df.dropna()
     df = df.apply(pandas.to_numeric, errors='ignore')
