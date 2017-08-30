@@ -11,19 +11,18 @@ import numpy as np
 
 app = Flask(__name__)
 
-@app.route('/chart/<name>')
-def chart(name):
-	graph = creategraph(name)
+@app.route('/chart', methods=['GET'])
+def chart():
+	graph = creategraph(request.args.get('instrument1'),request.args.get('instrument2'))
 	return Response(response=graph.render(), content_type='image/svg+xml')
 
-def creategraph(name):
+def creategraph(instrument1,instrument2):
 	#graph = pygal.XY(stroke_style={'width': 2},spacing=0,width=15000,height=400)
 	#graph.title = '% Change Coolness of programming languages over time.'
 	
-	kind = name
-	df = getpair.getalldata(kind)
+	df = getpair.getalldata(instrument1)
 
-	tuples = [tuple(x) for x in df[['time',kind]].values]
+	tuples = [tuple(x) for x in df[['time',instrument1]].values]
 	from pygal.style import Style
 	custom_style = Style(
 	background='black',
@@ -40,17 +39,17 @@ def creategraph(name):
 	    x_value_formatter=lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S'), style=custom_style)
 	
 	
-	dfforecast = pandas.DataFrame(connecttodb.selectforecast(kind))
+	dfforecast = pandas.DataFrame(connecttodb.selectforecast(instrument1,instrument2))
 	dfcopy = df.copy()
 	result = dfcopy.append(dfforecast, ignore_index=True)
 	result.sort_values(['time'], ascending=[True], inplace=True)
 	
 	v = []
 	for i in range(len(result)):
-		if np.isnan(result[kind].iloc[i]):
+		if np.isnan(result[instrument1].iloc[i]):
 			v.append(v[len(v)-1])
 		else:
-			v.append(result[kind].iloc[i])
+			v.append(result[instrument1].iloc[i])
 	result['value'] = v
 	print(result)
 	dfdown = result[result['predict']=='down']
@@ -63,7 +62,7 @@ def creategraph(name):
 	tuples3 = [tuple(x) for x in dfup[['time','value']].values]
 	graph.add('up', tuples3, show_dots=True, dots_size=10, stroke=False)
 	
-	graph.add(kind, tuples, show_dots=True, dots_size=2, stroke=False)
+	graph.add(instrument1, tuples, show_dots=True, dots_size=2, stroke=False)
 	
 	
 	#timelist = dfforecast['time'].values.tolist()

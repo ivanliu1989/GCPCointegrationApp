@@ -8,27 +8,51 @@ body = '''
 	</head>
 		<body>
 			<h1>Cointegrated currency exchange report</h1>
-			<h3>DE30_EUR</h3>
-			<div class="noborder" style="overflow: auto; width: 100%; height: 500px; style='margin:0px'">
+			<h3>DE30_EUR & EUR_JPY</h3>
+			<div class="noborder" style="overflow: auto; width: 100%; height: 750px; style='margin:0px'">
 				<div class="noborder" style="width: 40000px;">
 					<figure>
-        			<embed type="image/svg+xml" src="/chart/DE30_EUR" />
+        			<embed type="image/svg+xml" src="/chart?instrument1=DE30_EUR&instrument2=EUR_JPY" />
         			</figure>
         		</div>
         	</div>
-        	<h3>EUR_JPY</h3>
-        	<div class="noborder" style="overflow: auto; width: 100%; height: 500px; style='margin:0px'">
+        	<h3>DE30_EUR & EUR_USD</h3>
+			<div class="noborder" style="overflow: auto; width: 100%; height: 750px; style='margin:0px'">
 				<div class="noborder" style="width: 40000px;">
 					<figure>
-        			<embed type="image/svg+xml" src="/chart/EUR_JPY" />
+        			<embed type="image/svg+xml" src="/chart?instrument1=DE30_EUR&instrument2=EUR_USD" />
         			</figure>
         		</div>
         	</div>
-        	<h3>EUR_USD</h3>
-        	<div class="noborder" style="overflow: auto; width: 100%; height: 500px; style='margin:0px'">
+        	<h3>EUR_JPY & DE30_EUR</h3>
+			<div class="noborder" style="overflow: auto; width: 100%; height: 750px; style='margin:0px'">
 				<div class="noborder" style="width: 40000px;">
 					<figure>
-        			<embed type="image/svg+xml" src="/chart/EUR_USD" />
+        			<embed type="image/svg+xml" src="/chart?instrument1=EUR_JPY&instrument2=DE30_EUR" />
+        			</figure>
+        		</div>
+        	</div>
+        	<h3>EUR_JPY & EUR_USD</h3>
+        	<div class="noborder" style="overflow: auto; width: 100%; height: 750px; style='margin:0px'">
+				<div class="noborder" style="width: 40000px;">
+					<figure>
+        			<embed type="image/svg+xml" src="/chart?instrument1=EUR_JPY&instrument2=EUR_USD" />
+        			</figure>
+        		</div>
+        	</div>
+        	<h3>EUR_USD & DE30_EUR</h3>
+			<div class="noborder" style="overflow: auto; width: 100%; height: 750px; style='margin:0px'">
+				<div class="noborder" style="width: 40000px;">
+					<figure>
+        			<embed type="image/svg+xml" src="/chart?instrument1=EUR_USD&instrument2=DE30_EUR" />
+        			</figure>
+        		</div>
+        	</div>
+        	<h3>EUR_USD & EUR_JPY</h3>
+        	<div class="noborder" style="overflow: auto; width: 100%; height: 750px; style='margin:0px'">
+				<div class="noborder" style="width: 40000px;">
+					<figure>
+        			<embed type="image/svg+xml" src="/chart?instrument1=EUR_USD&instrument2=EUR_JPY" />
         			</figure>
         		</div>
         	</div>

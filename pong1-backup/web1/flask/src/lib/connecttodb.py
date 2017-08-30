@@ -96,15 +96,16 @@ def select(itemfrom,length):
     cnx.close()
     return list
     
-def selectforecast(kind):
+def selectforecast(instrument1,instrument2):
     
 	query = ("SELECT instrument1 AS instrument,dateto,predict_x AS predict "
-	"FROM data.cointegration WHERE public_url != '' AND instrument1 = '%s' "
+	"FROM data.cointegration WHERE public_url != '' AND instrument1 = '%s1' AND instrument2 = '%s2' "
 	"UNION "
 	"SELECT instrument2 AS instrument,dateto,predict_y AS predict "
-	"FROM data.cointegration WHERE public_url != '' AND instrument2 = '%s' "
+	"FROM data.cointegration WHERE public_url != '' AND instrument1 = '%s2' AND instrument2 = '%s1' "
 	)
-	query = query.replace('%s',(str(kind)))
+	query = query.replace('%s1',(str(instrument1)))
+	query = query.replace('%s2',(str(instrument2)))
 	cur,cnx = connect()
 	cur.execute(query)
 	list = []
