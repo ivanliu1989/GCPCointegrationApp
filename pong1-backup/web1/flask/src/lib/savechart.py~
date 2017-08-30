@@ -24,7 +24,7 @@ def denormalise_windows(d0,window_data):
     return denormalised_data
 
 def drawchart(df,dftest,datefrom,dateto,hedgingratio,pvalue,coeff1,coeff2):
-
+    hedgingratio,pvalue,coeff1,coeff2 = float(hedgingratio),float(pvalue),abs(float(coeff1)),abs(float(coeff2))
     c1 = df.columns[0]
     c2 = df.columns[1]
     totaldf = df.append(dftest, ignore_index=True)
@@ -40,7 +40,7 @@ def drawchart(df,dftest,datefrom,dateto,hedgingratio,pvalue,coeff1,coeff2):
     #dfn[c2] = normalise_windows(df[c2],df[c2][0])
     #dftestn[c1] = normalise_windows(dftest[c1])
     #dftestn[c2] = normalise_windows(dftest[c2])
-    vec = [coeff1,coeff2]
+    vec = [float(coeff1),float(coeff2)]
     print (vec)
     f, ax = plt.subplots(3, 1, figsize=(18, 6), sharex=True)
     ax[0].set_title("Currency pairs: "+c1+' from '+datefrom+' to '+dateto)

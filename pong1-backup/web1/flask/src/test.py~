@@ -1,0 +1,10 @@
+import lib.getpair as getpair
+import lib.connecttodb as connecttodb
+
+
+
+kind = 'EUR_USD'
+df = getpair.getalldata(kind)
+dfforecast = pandas.DataFrame(connecttodb.selectforecast(kind))
+print(df)
+print(dfforecast)

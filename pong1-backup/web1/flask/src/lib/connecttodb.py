@@ -50,7 +50,7 @@ def savefile():
         forecastto = dateto + timedelta(minutes=minuteperiod*0.2)
         dftest = getpair.getpairbydate(instrument1,instrument2,dateto,forecastto,minuteperiod)
         if len(df)>=100 and len(dftest)>20:
-        		public_url,predict_x,predict_y,datefrom,dateto = savechart.drawchart(df,dftest,str(datefrom),str(dateto),str(hedge_ratio),str(p_value),str(coeff1),str(coeff2))
+        		public_url,predict_x,predict_y,datefrom,dateto = savechart.drawchart(df,dftest,str(datefrom),str(dateto),float(hedge_ratio),float(p_value),float(coeff1),float(coeff2))
         		updateforecast(public_url,predict_x,predict_y,datefrom,dateto)
         		#break
         else:
@@ -102,7 +102,8 @@ def selectforecast(kind):
 	"FROM data.cointegration WHERE public_url != '' AND instrument1 = '%s' "
 	"UNION "
 	"SELECT instrument2 AS instrument,dateto,predict_y AS predict "
-	"FROM data.cointegration WHERE public_url != '' AND instrument2 = '%s' ")
+	"FROM data.cointegration WHERE public_url != '' AND instrument2 = '%s' "
+	)
 	query = query.replace('%s',(str(kind)))
 	cur,cnx = connect()
 	cur.execute(query)

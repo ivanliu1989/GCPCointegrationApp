@@ -33,15 +33,15 @@ def getdatabydate(client,kind,datefrom,dateto,lookback):
 def getalldata(kind):
     client = datastore.Client()
     query = client.query(kind=kind)
-    query.distinct_on = ['time']
-    query.order = ['time']
+    query.distinct_on = ['closeoutBid']
+    query.order = ['closeoutBid']
     value = []
     time = []
     tasks = list(query.fetch())
 
     for i in tasks:
         value.append(i['closeoutBid'])
-        time.append(i['time'].strftime("%Y-%m-%d %H:%M:%S"))
+        time.append(i['time'].timestamp())
     df = pandas.DataFrame({'time':time,kind: value})
     df = df.dropna()
     df = df.apply(pandas.to_numeric, errors='ignore')

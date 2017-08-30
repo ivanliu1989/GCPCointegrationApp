@@ -8,10 +8,27 @@ body = '''
 	</head>
 		<body>
 			<h1>Cointegrated currency exchange report</h1>
-			<div class="noborder" style="overflow: auto; width: 100%; height: 500px; style='margin:0px'">
-				<div class="noborder" style="width: 15000px;">
+			<h3>DE30_EUR</h3>
+			<div class="noborder" style="overflow: auto; width: 100%; height: 550px; style='margin:0px'">
+				<div class="noborder" style="width: 40000px;">
 					<figure>
-        			<embed type="image/svg+xml" src="/chart" />
+        			<embed type="image/svg+xml" src="/chart/DE30_EUR" />
+        			</figure>
+        		</div>
+        	</div>
+        	<h3>EUR_JPY</h3>
+        	<div class="noborder" style="overflow: auto; width: 100%; height: 550px; style='margin:0px'">
+				<div class="noborder" style="width: 40000px;">
+					<figure>
+        			<embed type="image/svg+xml" src="/chart/EUR_JPY" />
+        			</figure>
+        		</div>
+        	</div>
+        	<h3>EUR_USD</h3>
+        	<div class="noborder" style="overflow: auto; width: 100%; height: 550px; style='margin:0px'">
+				<div class="noborder" style="width: 40000px;">
+					<figure>
+        			<embed type="image/svg+xml" src="/chart/EUR_USD" />
         			</figure>
         		</div>
         	</div>

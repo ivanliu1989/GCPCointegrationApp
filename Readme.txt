@@ -13,6 +13,7 @@
 
 #Other time
 	cd to the directory
+	cd GCP
 	#Add all things in the current directory to the local git
 	git add .
 	#Commit with comments
