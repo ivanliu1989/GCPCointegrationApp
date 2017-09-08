@@ -52,7 +52,7 @@ def bulkloadlivedatabytime(instrument,granularity,start):
         "from": start,
         "to": stop,
         "granularity": granularity,
-        "count": mins}
+        "count": 2200}
     for r in InstrumentsCandlesFactory(instrument=instrument,params=params):
         client.request(r)
         data = r.response.get('candles')

@@ -1,8 +1,8 @@
 
 import mysql.connector
 from mysql.connector.constants import ClientFlag
-import getpair
-import savechart
+import src.lib.getpair as getpair
+import src.lib.savechart as savechart
 from datetime import timedelta
 from datetime import datetime
 import time
@@ -46,9 +46,9 @@ def savefile():
         #n=n+1
         #if public_url == '':
         minuteperiod = int((dateto-datefrom).total_seconds() / 60.0)
-        df = getpair.getpairbydate(instrument1,instrument2,datefrom,dateto,minuteperiod)
+        df = getpair.getpairbydate1(instrument1,instrument2,datefrom,dateto,minuteperiod)
         forecastto = dateto + timedelta(minutes=minuteperiod*0.2)
-        dftest = getpair.getpairbydate(instrument1,instrument2,dateto,forecastto,minuteperiod)
+        dftest = getpair.getpairbydate1(instrument1,instrument2,dateto,forecastto,minuteperiod)
         if len(df)>=100 and len(dftest)>20:
         		public_url,predict_x,predict_y,datefrom,dateto = savechart.drawchart(df,dftest,str(datefrom),str(dateto),float(hedge_ratio),float(p_value),float(coeff1),float(coeff2))
         		updateforecast(public_url,predict_x,predict_y,datefrom,dateto)
@@ -98,10 +98,10 @@ def select(itemfrom,length):
     
 def selectforecast(instrument1,instrument2):
     
-	query = ("SELECT instrument1 AS instrument,dateto,predict_x AS predict "
+	query = ("SELECT id,instrument1 AS instrument,dateto,predict_x AS predict, public_url, coeff1, coeff2 "
 	"FROM data.cointegration WHERE public_url != '' AND instrument1 = '%s1' AND instrument2 = '%s2' "
 	"UNION "
-	"SELECT instrument2 AS instrument,dateto,predict_y AS predict "
+	"SELECT id,instrument2 AS instrument,dateto,predict_y AS predict, public_url, coeff1, coeff2 "
 	"FROM data.cointegration WHERE public_url != '' AND instrument1 = '%s2' AND instrument2 = '%s1' "
 	)
 	query = query.replace('%s1',(str(instrument1)))
@@ -111,13 +111,57 @@ def selectforecast(instrument1,instrument2):
 	list = []
 
 
-	for (instrument,dateto,predict) in cur:
-		list.append({'instrument':instrument,'time':dateto.timestamp() ,'predict':predict})
+	for (id,instrument,dateto,predict,public_url,coeff1,coeff2) in cur:
+		list.append({'id':id,'instrument':instrument,'time':dateto.timestamp() ,'predict':predict,'public_url':public_url,'coeff1':coeff1,'coeff2':coeff2})
+		#print(instrument1)
+	cur.close()
+	cnx.close()
+	return list
+	
+def selectforecastbydate(instrument1,instrument2,datefrom,dateto):
+    
+	query = ("SELECT id,instrument1 AS instrument,dateto,predict_x AS predict, public_url, coeff1, coeff2 "
+	"FROM data.cointegration WHERE public_url != '' AND instrument1 = '%s1' AND instrument2 = '%s2' AND dateto >= '%s3' AND dateto <= '%s4' "
+	"UNION "
+	"SELECT id,instrument2 AS instrument,dateto,predict_y AS predict, public_url, coeff1, coeff2 "
+	"FROM data.cointegration WHERE public_url != '' AND instrument1 = '%s2' AND instrument2 = '%s1' AND dateto >= '%s3' AND dateto <= '%s4' "
+	)
+	query = query.replace('%s1',(str(instrument1)))
+	query = query.replace('%s2',(str(instrument2)))
+	query = query.replace('%s3',(datefrom))
+	query = query.replace('%s4',(dateto))
+
+	cur,cnx = connect()
+	cur.execute(query)
+	list = []
+
+
+	for (id,instrument,dateto,predict,public_url,coeff1,coeff2) in cur:
+		list.append({'id':id,'instrument':instrument,'time':dateto.timestamp() ,'predict':predict,'public_url':public_url,'coeff1':coeff1,'coeff2':coeff2})
 		#print(instrument1)
 	cur.close()
 	cnx.close()
 	return list
     
+def selectforecastbyid(id):
+
+	query = ("SELECT instrument1,instrument2,public_url,datefrom,dateto,hedge_ratio,coeff1,coeff2,mean,std,p_value "
+	"FROM data.cointegration WHERE id = '%s1';"
+
+	)
+	query = query.replace('%s1',(str(id)))
+	cur,cnx = connect()
+	cur.execute(query)
+
+
+	for (instrument1,instrument2,public_url,datefrom,dateto,hedge_ratio,coeff1,coeff2,mean,std,p_value) in cur:
+		cur.close()
+		cnx.close()
+		return ({'instrument1':instrument1,'instrument2':instrument2,'public_url':public_url,'datefrom':datefrom, 'dateto':dateto, 'hedge_ratio':hedge_ratio,'coeff1':coeff1,'coeff2':coeff2,'mean':mean,'std':std,'p_value':p_value})
+
+	cur.close()
+	cnx.close()
+	return {}
 def count():
     
 	query = ("SELECT id AS totalcount FROM data.cointegration WHERE public_url != ''")

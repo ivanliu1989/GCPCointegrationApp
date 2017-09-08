@@ -18,7 +18,7 @@ def getdata(client,kind,lookback):
         value.append(i['closeoutBid'])
     
     return value
-def getdatabydate(client,kind,datefrom,dateto,lookback):
+def getdatabydate1(client,kind,datefrom,dateto,lookback):
     query = client.query(kind=kind)
     query.distinct_on = ['time']
     query.order = ['time']
@@ -30,14 +30,68 @@ def getdatabydate(client,kind,datefrom,dateto,lookback):
         value.append(i['closeoutBid'])
     
     return value
+def getdatabydate2(client,kind,datefrom,dateto):
+	query = client.query(kind=kind)
+	query.distinct_on = ['time']
+	query.order = ['time']
+	query.add_filter('time', '>=',datefrom)
+	query.add_filter('time', '<=',dateto)
+	value = []
+	time = []
+	tasks = list(query.fetch())
+	for i in tasks:
+		value.append(i['closeoutBid'])
+		time.append(i['time'].timestamp())
+	df = pandas.DataFrame({'time_'+kind:time,kind: value})
+	df = df.dropna()
+	df = df.apply(pandas.to_numeric, errors='ignore')
+	return df
+    
+def getdatabydate3(kind,datefrom,dateto):
+	client = datastore.Client()
+	query = client.query(kind=kind)
+	query.distinct_on = ['time']
+	query.order = ['time']
+	query.add_filter('time', '>=',datefrom)
+	query.add_filter('time', '<=',dateto)
+	value = []
+	time = []
+	tasks = list(query.fetch())
+	
+	for i in tasks:
+		value.append(i['closeoutBid'])
+		time.append(i['time'].timestamp())
+	df = pandas.DataFrame({'time':time,kind: value})
+	df = df.dropna()
+	df = df.apply(pandas.to_numeric, errors='ignore')
+	return df
+
 def getalldata(kind):
     client = datastore.Client()
     query = client.query(kind=kind)
-    query.distinct_on = ['closeoutBid']
-    query.order = ['closeoutBid']
+    query.distinct_on = ['time']
+    query.order = ['time']
     value = []
     time = []
     tasks = list(query.fetch())
+
+    for i in tasks:
+        value.append(i['closeoutBid'])
+        time.append(i['time'].timestamp())
+    df = pandas.DataFrame({'time':time,kind: value})
+    df = df.dropna()
+    df = df.apply(pandas.to_numeric, errors='ignore')
+    return df
+    
+def getsomedata(kind,lookback):
+    client = datastore.Client()
+    query = client.query(kind=kind)
+    query.distinct_on = ['time']
+    # - = sort by descending
+    query.order = ['-time']
+    value = []
+    time = []
+    tasks = list(query.fetch(limit=lookback))
 
     for i in tasks:
         value.append(i['closeoutBid'])
@@ -57,13 +111,44 @@ def getpair(instrument1,instrument2,lookback):
     df = df.dropna()
     df = df.apply(pandas.to_numeric, errors='ignore')
     return df
-def getpairbydate(instrument1,instrument2,datefrom,dateto,lookback):
+def getpairbydate1(instrument1,instrument2,datefrom,dateto,lookback):
     client = datastore.Client()
-    v1 = getdatabydate(client,instrument1,datefrom,dateto,lookback)
-    v2 = getdatabydate(client,instrument2,datefrom,dateto,lookback)
+    v1 = getdatabydate1(client,instrument1,datefrom,dateto,lookback)
+    v2 = getdatabydate1(client,instrument2,datefrom,dateto,lookback)
     df1 = pandas.DataFrame({instrument1: v1})
     df2 = pandas.DataFrame({instrument2: v2})
     df = pandas.concat([df1,df2],axis=1)
+    df = df.dropna()
+    df = df.apply(pandas.to_numeric, errors='ignore')
+    return df
+    
+def getpairbydate2(instrument1,instrument2,datefrom,dateto):
+    client = datastore.Client()
+    df1 = getdatabydate2(client,instrument1,datefrom,dateto)
+    df2 = getdatabydate2(client,instrument2,datefrom,dateto)
+    df = pandas.concat([df1,df2],axis=1)
+    df = df.dropna()
+    df = df.apply(pandas.to_numeric, errors='ignore')
+    return df
+    
+def getlstmdata(kind):
+    client = datastore.Client()
+    query = client.query(kind=kind+'_lstm')
+    query.distinct_on = ['time']
+    # - = sort by descending
+    query.order = ['-time']
+    actual_value = []
+    predicted_value = []
+    square_error = []
+    time = []
+    tasks = list(query.fetch())
+    for i in tasks:
+        actual_value.append(i['actual_value'])
+        predicted_value.append(i['predicted_value'])
+        square_error.append(i['square_error'])
+        time.append(i['time'].timestamp())
+    
+    df = pandas.DataFrame({'actual_value':actual_value,'predicted_value': predicted_value,'square_error': square_error, 'time':time})
     df = df.dropna()
     df = df.apply(pandas.to_numeric, errors='ignore')
     return df

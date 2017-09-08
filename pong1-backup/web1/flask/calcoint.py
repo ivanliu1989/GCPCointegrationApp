@@ -1,4 +1,4 @@
-import lib.cal2 as cal2
+import src.lib.cal2 as cal2
 import sys
 
 #name of the script = sys.argv[0]

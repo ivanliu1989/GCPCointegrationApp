@@ -1,0 +1,4 @@
+import lib.connecttodb as connecttodb
+import lib.getpair as getpair
+import lib.savechart as savechart
+connecttodb.savefile()

@@ -41,7 +41,7 @@ def drawchart(df,dftest,datefrom,dateto,hedgingratio,pvalue,coeff1,coeff2):
     #dftestn[c1] = normalise_windows(dftest[c1])
     #dftestn[c2] = normalise_windows(dftest[c2])
     vec = [coeff1,coeff2]
-    print (vec)
+
     f, ax = plt.subplots(3, 1, figsize=(18, 6), sharex=True)
     ax[0].set_title("Currency pairs: "+c1+' from '+datefrom+' to '+dateto)
     ax[1].set_title("Currency: "+c2+' from '+datefrom+' to '+dateto)
@@ -49,6 +49,8 @@ def drawchart(df,dftest,datefrom,dateto,hedgingratio,pvalue,coeff1,coeff2):
 
     x1 = dfn.as_matrix()
     in_sample = np.dot(x1, vec)
+    x2 = totaldfn.as_matrix()
+    in_test = np.dot(x2,vec)
     mean = np.mean(in_sample)
     std = np.std(in_sample)
     
@@ -99,6 +101,7 @@ def drawchart(df,dftest,datefrom,dateto,hedgingratio,pvalue,coeff1,coeff2):
     ax[2].axhline(y=mean, color='g', ls='--', alpha=.5)
     ax[2].axhline(y=mean + std, color='y', ls='--', alpha=.5)
     ax[2].plot(range(len(in_sample)),in_sample, label="spreads")
+    ax[2].plot(range(len(dfn)-1,len(in_test)),in_test[len(dfn)-1:], label="prediction", color='r', ls='--', alpha=.5)
     ax[2].legend()
     if vec[0] == 1:
         if vec[1] > 0:

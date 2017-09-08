@@ -23,4 +23,3 @@ pip3 install keras
 pip3 install tensorflow
 sudo apt-get install python3-tk
 pip3 install h5py
-pip3 install python-nvd3

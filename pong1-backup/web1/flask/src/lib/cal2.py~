@@ -113,7 +113,7 @@ def savefile(destination_blob_name,source_file_name):
 
 
 def coint(instrument1,instrument2,lookback,p_value):
-    import src.lib.getpair as getpair
+    import lib.getpair as getpair
     df = getpair.getpair(instrument1,instrument2,lookback)
     print (len(df))
     if len(df)>=100:
