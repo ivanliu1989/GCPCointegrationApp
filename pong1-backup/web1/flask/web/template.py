@@ -17,15 +17,25 @@ body = '''
 	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
 	<link rel="stylesheet" href="https://cdn.rawgit.com/novus/nvd3/v1.8.1/build/nv.d3.css">
 	<style>
-		.cointchart g.nv-scatter g.nv-series-2 path.nv-point
-		{
-		    stroke-opacity: 0.5 !important;
-		    stroke-width: 15px;
+
+		.nvd3 .nv-groups .nv-point {
+		  transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
+		  -moz-transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
+		  -webkit-transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
 		}
-		.cointchart g.nv-series-2 path.nv-line
-		{
-		    stroke-opacity: 0;
+		
+		.nvd3.nv-scatter .nv-groups .nv-point.hover {
+		  stroke-width: 15px;
+		  fill-opacity: .5 !important;
+		  stroke-opacity: .5 !important;
 		}
+		
+		.nvd3.nv-scatter{
+		  stroke-width: 4px;
+		  fill-opacity: .5 !important;
+		  stroke-opacity: .5 !important;
+		}
+
 	</style>
 	</head>
 		<body>
@@ -194,25 +204,99 @@ coint =   '''
    '''
       
 lstm =   '''
-      <html>
+<html>
 	<head>
 	<link rel="stylesheet" type="text/css" href="https://storage.googleapis.com/pong-web-material/css/style.css">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-
+	<link rel="stylesheet" href="https://cdn.rawgit.com/novus/nvd3/v1.8.1/build/nv.d3.css">
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.4/nv.d3.min.css"/>
+  	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+  	<script src="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.4/nv.d3.min.js"></script>
 	</head>
-		<body>
-			<h1>LSTM currency exchange forecast</h1>
-			<h3>EUR_USD</h3>
-			<div class="noborder" style="overflow: auto; width: 100%; height: 500px; style='margin:0px'">
-				<div class="noborder" style="width: 100%;">
-					<figure>
-        			<embed type="image/svg+xml" src="/lstm/lstmchart?instrument=EUR_USD" />
-        			</figure>
-        		</div>
-        	</div>
+		<body style='padding:20px'>
+			<h1>LSTM abnormal pattern detection</h1>
+			<div class="row">
+		    %chart
+		  </div>
 		</body>
 	</html>
    '''
+lstmtable = '''
+	  <div>
+		  <h4 style="text-align:center">%serie1</h4>
+			<div id="chart%id" style='height:400px;'>
+					<svg></svg>
+			</div>
+	  </div>
+	
+	<script>
+
+		chartdata%id =[{"key": "%serie1", "yAxis": "1", "type": "line", "values": %data0},
+							{"key": "prediction", "yAxis": "1", "type": "line", "values": %data1},
+							{"key": "square error", "yAxis": "2", "type": "line", "color": "rgba(255, 105, 105, 0.6)", "values": %data2}];
+		nv.addGraph(function() {
+		var chart = nv.models.multiChart()
+			.margin({top:0,right:150,bottom:0,left:150})
+        	.height(300);;
+		
+		chart.xAxis.tickFormat(function(d) {
+		 // Will Return the date, as "%m/%d/%Y"(08/06/13)
+		 return d3.time.format.utc('%Y-%m-%d')(new Date(d*1000))
+		});
+		
+		var xAxis = nv.models.axis()
+                xAxis
+	              .axisLabel('Date')
+	              .tickFormat(function(d) { console.log(d); return d3.time.format('%Y-%m-%d')(d); })
+	              .scale(
+	                  d3.time.scale().
+	                      domain([new Date(%datefrom), new Date(%dateto)])
+	              );
+
+      chart.xAxis = xAxis
+      
+      chart.lines1.xDomain([new Date(%datefrom), new Date(%dateto)])
+      chart.lines2.xDomain([new Date(%datefrom), new Date(%dateto)])
+
+
+
+ 
+
+		chart.yAxis1
+			.tickFormat(d3.format(',.4f'));
+			
+		chart.yAxis2
+			.tickFormat(d3.format(',.4f'));
+		
+		chart.tooltip.contentGenerator(function (d) {
+	        //return "<img src='https://storage.googleapis.com/pong-cointegration/DE30_EUR_EUR_JPY_2017-08-30%2000%3A00%3A08' width='600'>";}); 	
+				 x = d.value
+				 y = '';
+				 value = '';
+	          d.series.forEach(function(elem){
+	          	y = elem.key;
+	          	value = elem.value;
+	          })
+
+				return "<div style='padding:3px;'><div><b>"+d3.time.format.utc('%Y-%m-%d %H:%M:%S')(new Date(x*1000))+"</b></div>"+"<div>"+d3.format(',.4f')(value)+"</div></div>";        	
+
+          }); 	
+
+		d3.select('#chart%id svg')
+			.datum(chartdata%id)
+			.transition().duration(500)
+			.call(chart);
+		
+		nv.utils.windowResize(chart.update);
+		
+		return chart;
+		});
+	</script>
+	'''
    
 def getbodytemplate():
 	return body
@@ -225,3 +309,6 @@ def getcointtemplate():
 	
 def getlstmtemplate():
 	return lstm
+	
+def getlstmtable():
+	return lstmtable

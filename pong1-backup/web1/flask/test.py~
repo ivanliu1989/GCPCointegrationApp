@@ -11,9 +11,9 @@ import pandas
 import numpy as np
 from datetime import date
 from datetime import timedelta
-id = '2993'
-body = template.getcointtemplate()
-values = connecttodb.selectforecastbyid(id)
-print(values)
-import flaskapp
-flaskapp.getfxdata(values)
+
+import flaskapp as app
+
+app.hello_world()
+
+#connecttodb.savefile2()

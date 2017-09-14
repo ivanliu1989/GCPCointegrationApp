@@ -49,24 +49,56 @@ def savefile():
         df = getpair.getpairbydate1(instrument1,instrument2,datefrom,dateto,minuteperiod)
         forecastto = dateto + timedelta(minutes=minuteperiod*0.2)
         dftest = getpair.getpairbydate1(instrument1,instrument2,dateto,forecastto,minuteperiod)
-        if len(df)>=100 and len(dftest)>20:
-        		public_url,predict_x,predict_y,datefrom,dateto = savechart.drawchart(df,dftest,str(datefrom),str(dateto),float(hedge_ratio),float(p_value),float(coeff1),float(coeff2))
-        		updateforecast(public_url,predict_x,predict_y,datefrom,dateto)
+
+        if len(df)>=100 and len(dftest)>=20:
+        		public_url,predict_x,predict_y,datefrom,dateto,coint_level = savechart.drawchart(df,dftest,str(datefrom),str(dateto),float(hedge_ratio),float(p_value),float(coeff1),float(coeff2))
+        		updateforecast(public_url,predict_x,predict_y,datefrom,dateto,coint_level)
         		#break
         else:
         		print('not enough sample'+str(len(df))+' '+str(len(dftest)))
         		print(dateto)
         		print(forecastto)
-        		updateforecast('',None,None,datefrom,dateto)
+        		#updateforecast('',None,None,datefrom,dateto)
     
     cnx.commit()
     cur.close()
     cnx.close()
     
-def updateforecast(public_url,predict_x,predict_y,datefrom,dateto):
-    query = ("UPDATE data.cointegration SET public_url = %s, predict_x = %s, predict_y = %s WHERE datefrom = %s AND dateto = %s")
+def savefile2():
+    
+    query = ("SELECT instrument1,instrument2,datefrom,dateto,hedge_ratio,coeff1,"
+        "coeff2,mean,std,p_value,public_url,user_review,predict_x,predict_y "
+        "FROM data.cointegration")
     cur,cnx = connect()
-    cur.execute(query,(public_url,predict_x,predict_y,datefrom,dateto))
+    cur.execute(query)
+
+    for (instrument1,instrument2,datefrom,dateto,hedge_ratio,coeff1,coeff2,
+        mean,std,p_value,public_url,user_review,predict_x,predict_y) in cur:
+        #n=n+1
+        #if public_url == '':
+        minuteperiod = int((dateto-datefrom).total_seconds() / 60.0)
+        df = getpair.getpairbydate1(instrument1,instrument2,datefrom,dateto,minuteperiod)
+        forecastto = dateto + timedelta(minutes=minuteperiod*0.2)
+        dftest = getpair.getpairbydate1(instrument1,instrument2,dateto,forecastto,minuteperiod)
+
+        if len(df)>=100 and len(dftest)>=20:
+        		public_url,predict_x,predict_y,datefrom,dateto,coint_level = savechart.drawchart(df,dftest,str(datefrom),str(dateto),float(hedge_ratio),float(p_value),float(coeff1),float(coeff2))
+        		updateforecast(public_url,predict_x,predict_y,datefrom,dateto,coint_level)
+        		#break
+        else:
+        		print('not enough sample'+str(len(df))+' '+str(len(dftest)))
+        		print(dateto)
+        		print(forecastto)
+        		#updateforecast('',None,None,datefrom,dateto)
+    
+    cnx.commit()
+    cur.close()
+    cnx.close()
+    
+def updateforecast(public_url,predict_x,predict_y,datefrom,dateto,coint_level):
+    query = ("UPDATE data.cointegration SET public_url = %s, predict_x = %s, predict_y = %s, coint_level = %s WHERE datefrom = %s AND dateto = %s")
+    cur,cnx = connect()
+    cur.execute(query,(public_url,predict_x,predict_y,coint_level,datefrom,dateto))
     cnx.commit()
     cur.close()
     cnx.close()
@@ -120,10 +152,10 @@ def selectforecast(instrument1,instrument2):
 	
 def selectforecastbydate(instrument1,instrument2,datefrom,dateto):
     
-	query = ("SELECT id,instrument1 AS instrument,dateto,predict_x AS predict, public_url, coeff1, coeff2 "
+	query = ("SELECT id,instrument1 AS instrument,dateto,coint_level,predict_x AS predict, public_url, coeff1, coeff2 "
 	"FROM data.cointegration WHERE public_url != '' AND instrument1 = '%s1' AND instrument2 = '%s2' AND dateto >= '%s3' AND dateto <= '%s4' "
 	"UNION "
-	"SELECT id,instrument2 AS instrument,dateto,predict_y AS predict, public_url, coeff1, coeff2 "
+	"SELECT id,instrument2 AS instrument,dateto,coint_level,predict_y AS predict, public_url, coeff1, coeff2 "
 	"FROM data.cointegration WHERE public_url != '' AND instrument1 = '%s2' AND instrument2 = '%s1' AND dateto >= '%s3' AND dateto <= '%s4' "
 	)
 	query = query.replace('%s1',(str(instrument1)))
@@ -136,8 +168,8 @@ def selectforecastbydate(instrument1,instrument2,datefrom,dateto):
 	list = []
 
 
-	for (id,instrument,dateto,predict,public_url,coeff1,coeff2) in cur:
-		list.append({'id':id,'instrument':instrument,'time':dateto.timestamp() ,'predict':predict,'public_url':public_url,'coeff1':coeff1,'coeff2':coeff2})
+	for (id,instrument,dateto,coint_level,predict,public_url,coeff1,coeff2) in cur:
+		list.append({'id':id,'instrument':instrument,'time':dateto.timestamp(),'coint_level':coint_level,'predict':predict,'public_url':public_url,'coeff1':coeff1,'coeff2':coeff2})
 		#print(instrument1)
 	cur.close()
 	cnx.close()

@@ -30,5 +30,15 @@ def bulkcoint(instrument1,instrument2,lookback,p_value):
 	cal2.bulkcoint(instrument1,instrument2,lookback,p_value)
 
 #bulkloaddatatoentity('EUR_GBP','M15','2017-08-07T00:00:00Z')
+#bulkcoint('EUR_USD','EUR_GBP',100,0.05)
+#bulkcoint('EUR_JPY','EUR_GBP',100,0.05)
 
-bulkcoint('EUR_USD','EUR_GBP',6000,0.05)
+#bulkloaddatatoentity('GBP_USD','M15','2017-08-07T00:00:00Z')
+#bulkloaddatatoentity('AUD_USD','M15','2017-08-07T00:00:00Z')
+#bulkcoint('EUR_USD','GBP_USD',100,0.05)
+#bulkcoint('EUR_USD','AUD_USD',100,0.05)
+#bulkcoint('GBP_USD','AUD_USD',100,0.05)
+
+#bulkloaddatatoentity('USD_CAD','M15','2017-08-07T00:00:00Z')
+bulkcoint('USD_CAD','AUD_USD',100,0.05)
+#bulkcoint('GBP_USD','AUD_USD',100,0.05)

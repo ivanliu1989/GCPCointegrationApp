@@ -97,19 +97,23 @@ def drawchart(df,dftest,datefrom,dateto,hedgingratio,pvalue,coeff1,coeff2):
     ax[0].legend()
     ax[1].legend()
     # Plot the mean and one std above and below it.
-    ax[2].axhline(y=mean - std, color='y', ls='--', alpha=.5)
+    ax[2].axhline(y=mean - (2*std), color='y', ls='--', alpha=.5)
     ax[2].axhline(y=mean, color='g', ls='--', alpha=.5)
-    ax[2].axhline(y=mean + std, color='y', ls='--', alpha=.5)
+    ax[2].axhline(y=mean + (2*std), color='y', ls='--', alpha=.5)
     ax[2].plot(range(len(in_sample)),in_sample, label="spreads")
-    ax[2].plot(range(len(dfn)-1,len(in_test)),in_test[len(dfn)-1:], label="prediction", color='r', ls='--', alpha=.5)
+    coint_level = 'g'
+    if (any(i >= (mean + (2*std)) for i in in_test[len(dfn)-1:])) or (any(i <= (mean - (2*std)) for i in in_test[len(dfn)-1:])):
+    	coint_level = 'y'
+    print(coint_level)
+    ax[2].plot(range(len(dfn)-1,len(in_test)),in_test[len(dfn)-1:], label="prediction", color=coint_level, ls='--', alpha=.5)
     ax[2].legend()
     if vec[0] == 1:
         if vec[1] > 0:
-            ax[1].text(0, mean + std, 'Spreads: '+c1+'+'+str(round(vec[1],3))+'*'+c2)
+            ax[1].text(0, mean + (2*std), 'Spreads: '+c1+'+'+str(round(vec[1],3))+'*'+c2)
         else:
-            ax[1].text(0, mean + std, 'Spreads: '+c1+''+str(round(vec[1],3))+'*'+c2)
+            ax[1].text(0, mean + (2*std), 'Spreads: '+c1+''+str(round(vec[1],3))+'*'+c2)
     else:
-        ax[1].text(0, mean + std, 'Spreads: '+str(round(vec[0],3))+'*'+c1+'+'+c2)
+        ax[1].text(0, mean + (2*std), 'Spreads: '+str(round(vec[0],3))+'*'+c1+'+'+c2)
     ax[2].text(0,mean,"Eigenvector :"+str(vec))
     ax[0].grid()
     ax[1].grid() 
@@ -121,7 +125,7 @@ def drawchart(df,dftest,datefrom,dateto,hedgingratio,pvalue,coeff1,coeff2):
     print (public_url)
     plt.close(f)
     plt.close('all')
-    return public_url,predict_x,predict_y,datefrom,dateto
+    return public_url,predict_x,predict_y,datefrom,dateto,coint_level
     #connecttodb.updateforecast(public_url,predict_x,predict_y,datefrom,dateto)
 
 def savefile(destination_blob_name,source_file_name):

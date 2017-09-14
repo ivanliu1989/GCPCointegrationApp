@@ -13,7 +13,7 @@ from datetime import datetime
 
 def normalise_windows(window_data):
     normalised_data = []
-    n = window_data[0]
+    n = window_data.iloc[0]
     if n == 0:
         n = 1
     for window in window_data:
@@ -114,11 +114,11 @@ def savefile(destination_blob_name,source_file_name):
 
 def coint(instrument1,instrument2,lookback,p_value):
     import src.lib.getpair as getpair
-    df = getpair.getpair(instrument1,instrument2,lookback)
-    print (len(df))
+    df,start_date,stop_date = getpair.getpair(instrument1,instrument2,lookback)
+    
     if len(df)>=100:
-        stop_date = datetime.utcnow()
-        start_date = stop_date - timedelta(minutes=lookback)
+        #stop_date = datetime.utcnow()
+        #start_date = stop_date - timedelta(minutes=lookback)
         result = approach2(df,p_value,start_date.strftime("%Y-%m-%d %H:%M:%S"),stop_date.strftime("%Y-%m-%d %H:%M:%S"))
         print (result)
         if result != None:
@@ -140,10 +140,9 @@ def coint(instrument1,instrument2,lookback,p_value):
 def bulkcoint(instrument1,instrument2,lookback,p_value):
     import src.lib.getpair as getpair
     for i in range(3000):
-        stop_date = datetime.utcnow() - timedelta(minutes=i*15)
-        start_date = stop_date - timedelta(minutes=lookback)
-        df = getpair.getpairbydate1(instrument1,instrument2,start_date,stop_date,lookback)
-        print (len(df))
+        stopdate = datetime.utcnow() - timedelta(minutes=i*15)
+
+        df,start_date,stop_date = getpair.getpairbystopdate(instrument1,instrument2,stopdate,lookback)
 
         if len(df)>=100:
             
