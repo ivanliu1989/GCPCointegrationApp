@@ -1,0 +1,820 @@
+from flask import Flask, request, url_for, Response
+import re
+import web.template as template
+import src.lib.connecttodb as connecttodb
+import src.lib.getpair as getpair
+import src.lib.savechart as savechart
+import pygal
+from pygal.style import DarkStyle
+from datetime import datetime
+import pandas
+import numpy as np
+from datetime import date
+from datetime import timedelta
+
+
+app = Flask(__name__)
+
+# default cointegration sub-system: display a list of instrument charts
+@app.route('/')	
+def main():
+	# get html body template
+	body = template.getbodytemplate()
+	chart = ''
+	# append html chart
+	chart = chart+createnvd3chartlist(1,'EUR_USD','GBP_USD','inline','150',0)
+	chart = chart+createnvd3chartlist(1,'USD_CAD','AUD_USD','inline','150',0)
+	chart = chart+createnvd3chartlist(1,'EUR_USD','AUD_USD','inline','150',0)
+	chart = chart+createnvd3chartlist(1,'GBP_USD','AUD_USD','inline','150',0)
+	chart = chart+createnvd3chartlist(1,'EUR_JPY','EUR_USD','inline','150',0)
+	chart = chart+createnvd3chartlist(1,'EUR_USD','EUR_GBP','inline','150',0)
+	chart = chart+createnvd3chartlist(1,'EUR_JPY','EUR_GBP','inline','150',0)
+	
+	body = body.replace('%nvd3chart',chart)	
+	body = body.replace('%title','Cointegration dashboard')
+	body = body.replace('%tabnum','')
+	body = body.replace('%table','')
+	
+	return body
+	
+def createnvd3chartlist(n,instrument1,instrument2,display,margin,width):
+	# create and return a list of html charts
+	chartlist= ''
+	today = date.today()
+
+	for i in range(n):
+		# define a time period from Monday to Friday on the i week 
+		monday = today + timedelta(days=-today.weekday(), weeks=-i)
+		friday = monday + timedelta(days=+4)
+		monday = datetime.combine(monday, datetime.min.time())
+		friday = datetime.combine(friday, datetime.max.time())
+		
+		# get data from the entity from defined period
+		df1 = getpair.getdatabydate3(instrument1,monday,friday)
+		df1 = df1.dropna()
+		df2 = getpair.getdatabydate3(instrument2,monday,friday)
+		df2 = df2.dropna()
+		
+		# get cointegration data from the sql database
+		columns = ['id','instrument','time','coint_level','predict','public_url','coeff1','coeff2']
+		dfforecast = pandas.DataFrame(connecttodb.selectforecastbydate(instrument1,instrument2,monday.strftime('%Y-%m-%d %H:%M:%S'),friday.strftime('%Y-%m-%d %H:%M:%S')),columns=columns)
+		
+		# create a html chart
+		html = createnvd3chart(i,df1,df2,dfforecast,instrument1,instrument2,monday.timestamp(),friday.timestamp(),display,margin,width)
+		chartlist = chartlist+html
+		
+	return chartlist
+	
+def createnvd3chart(id,df1,df2,dfforecast,instrument1,instrument2,datefrom,dateto,display,margin,width):
+	# create and return html chart
+	if len(df1)==0:
+		return ''
+	# call this line if you want to normalise data
+	#df1[instrument1] = savechart.normalise_windows(df1[instrument1],df1[instrument1].iloc[0])
+	df1.rename(columns={'time': 'x', instrument1: 'y'}, inplace=True)
+	data = df1[['x','y']].to_dict(orient='records')
+
+	#df2[instrument2] = savechart.normalise_windows(df2[instrument2],df2[instrument2].iloc[0])
+	df2.rename(columns={'time': 'x', instrument2: 'y'}, inplace=True)
+	data2 = df2[['x','y']].to_dict(orient='records')
+	
+	value = []
+	for i in range(len(dfforecast)):
+		t = dfforecast['time'].iloc[i]
+		d = df1[df1['x']<=t]
+		value.append(d.tail(1)['y'].iloc[0]+(abs(df1['y'].max()-df1['y'].min())*0.05))
+
+	dfforecast['y'] = value
+
+	dfforecast.rename(columns={'time': 'x'}, inplace=True)
+	forecastlevel1 = dfforecast[dfforecast['coint_level']=='g']
+	forecastlevel1['shape'] = 'triangle-down'
+	data3_1 = forecastlevel1[['x','y','shape']].to_dict(orient='records')
+
+	forecastlevel2 = dfforecast[dfforecast['coint_level']=='y']
+	forecastlevel2['shape'] = 'triangle-down'
+	data3_2 = forecastlevel2[['x','y','shape']].to_dict(orient='records')
+
+	data4 = dict(zip(dfforecast.x, dfforecast.public_url))
+	data5 = dict(zip(dfforecast.x, dfforecast.id))
+	
+	html = '''
+	  <div>
+	  <h4 style="text-align:center">%serie1 & %serie2</h4>
+	  <div style="z-index: 1; position: relative; top: 0px; left: 0px;">
+			<div id="chart%id" class="cointchart" style='height:350px; position: relative;'>
+					<svg></svg>
+			</div>
+			<div style="z-index: 2; position: absolute; top: 0px; left: %marginpx; display:%display;"><a href="/gethistory?n=5&instrument1=%serie1&instrument2=%serie2" target="_blank">history</a></div></div>
+	  </div>
+	  </div>
+	
+	<script>
+
+		dict%id = %data4
+		dictid%id = %data5
+		chartdata%id =[
+							{"key": "%serie1", "yAxis": "1", "type": "line", "color": "#21618C", "values": %data1},
+							{"key": "%serie2", "yAxis": "2", "type": "line", "color": "#A9CCE3", "values": %data2},
+							{"key": "possible cointegrated", "yAxis": "1", "type": "scatter", "color": "rgba(169,204,227,1.0)", "values": %data3_2},
+							{"key": "cointegrated", "yAxis": "1", "type": "scatter", "color": "rgba(31,97,141,1.0)", "values": %data3_1}
+							];
+		nv.addGraph(function() {
+		var chart = nv.models.multiChart()
+			.margin({top:0,right:%margin,bottom:0,left:%margin})
+        	.height(300);
+      %width
+		chart.lines1.interactive(false)
+		chart.lines2.interactive(false)
+		
+		chart.xAxis.tickFormat(function(d) {
+		 // Will Return the date, as "%m/%d/%Y"(08/06/13)
+		 return d3.time.format.utc('%Y-%m-%d')(new Date(d*1000))
+		});
+		
+		chart.lines1.xDomain([new Date(%datefrom),new Date(%dateto)]);
+		chart.lines2.xDomain([new Date(%datefrom),new Date(%dateto)]);
+		chart.scatters1.xDomain([new Date(%datefrom),new Date(%dateto)]);
+
+
+		chart.yAxis1
+			.tickFormat(d3.format(',.4f'));
+		chart.yAxis2
+			.tickFormat(d3.format(',.4f'));
+		
+		chart.tooltip.contentGenerator(function (d) {
+        //return "<img src='https://storage.googleapis.com/pong-cointegration/DE30_EUR_EUR_JPY_2017-08-30%2000%3A00%3A08' width='600'>";}); 	
+			 x = d.value
+			 y = '';
+			 value = '';
+          d.series.forEach(function(elem){
+          	y = elem.key;
+          	value = elem.value;
+
+          })
+
+          if(x in dict%id)
+          //if(y == 'cointegrated' || y == 'possible cointegrated')
+	       	{
+	       		return "<div style='padding:5px;'><img src='"+dict%id[x]+"' width='600'></div>";
+	       	}
+	       	else
+	       	{
+					return "<div style='padding:3px;'><div><b>"+d3.time.format.utc('%Y-%m-%d %H:%M:%S')(new Date(x*1000))+"</b></div>"+"<div>"+d3.format(',.4f')(value)+"</div></div>";        	
+	       	}
+
+          }); 	
+		chart.scatters1.dispatch.on('elementClick', function(e) {
+				//if(e.series.key == 'cointegrated' || e.series.key == 'possible cointegrated')
+				if(e.point.x in dict%id)
+				{
+					//alert("You've clicked on " + e.series.key + " - " + e.point.x + " - " + dictid%id[e.point.x]);
+					window.open('/coint?id=' + dictid%id[e.point.x],'_blank');
+				}
+				
+		     	
+		 });
+		 
+		 chart.lines1.dispatch.on('elementClick', function(e) {
+				//if(e.series.key == 'cointegrated' || e.series.key == 'possible cointegrated')
+				if(e.point.x in dict%id)
+				{
+					//alert("You've clicked on " + e.series.key + " - " + e.point.x + " - " + dictid%id[e.point.x]);
+					window.open('/coint?id=' + dictid%id[e.point.x],'_blank');
+				}
+				
+		     	
+		 });
+		d3.select('#chart%id svg')
+			.datum(chartdata%id)
+			.transition().duration(500)
+			.call(chart);
+		
+		nv.utils.windowResize(chart.update);
+		
+		return chart;
+		});
+	</script>
+		'''
+	html = html.replace('%id',str(id)+'_'+instrument1+'_'+instrument2)
+	html = html.replace('%datefrom',str(datefrom))
+	html = html.replace('%dateto',str(dateto))
+	html = html.replace('%serie1',instrument1)
+	html = html.replace('%serie2',instrument2)
+	html = html.replace('%data1',str(data))
+	html = html.replace('%data2',str(data2))
+	html = html.replace('%data3_1',str(data3_1))
+	html = html.replace('%data3_2',str(data3_2))
+	html = html.replace('%data4',str(data4))
+	html = html.replace('%data5',str(data5))
+	html = html.replace('%display',display)
+	html = html.replace('%margin',margin)
+	
+	if(width==0):
+		html = html.replace('%width','')
+	else:
+		html = html.replace('%width','chart.width('+str(width)+');')
+
+	return html
+
+# open a new tab to show a chart list of one instrument
+@app.route('/gethistory', methods=['GET'])
+def gethistory():
+	n = request.args.get('n')
+	instrument1 = request.args.get('instrument1')
+	instrument2 = request.args.get('instrument2')
+	body = template.getbodytemplate()
+	body = body.replace('%title','History data')
+	body = body.replace('%nvd3chart',createnvd3chartlist(int(n),instrument1,instrument2,'none','150',0))	
+	body = body.replace('%tabnum','')
+	body = body.replace('%table','')
+	
+	return body
+
+	
+#lstm sub-system: to display currency exchange with lstm signals on buy and sell.	
+@app.route('/lstm', methods=['GET'])
+def lstm():
+	# main page for the lstm sub-system
+	today = date.today()
+	# append a chart of each instrument to the list
+	list = ''
+	list = list+htmlchartblock(0,today,'EUR_USD')
+	list = list+htmlchartblock(0,today,'AUD_USD')
+	list = list+htmlchartblock(0,today,'GBP_USD')
+	body = template.getlstmtemplate()
+	# insert the lstm table to html
+	body = body.replace('%chart',list)
+	return body
+	
+def htmlchartblock(n,today,instrument,display='inherit'):
+	# create a lstm chart
+	block = htmlchart(n,today,instrument)
+	tab = '''
+		<div>
+			<div style='margin-left:150px; height:0px; display:%display;'>
+				<ul class="pagination  pagination-sm" id="pagination%id%instrument">
+					<li class="page active"><a href="#">this week</a></li>
+					<li class="page"><a href="#">1 week</a></li>
+					<li class="page"><a href="#">2 week</a></li>
+					<li class="page"><a href="#">3 week</a></li>
+					<li class="page"><a href="#">4 week</a></li>
+					<li class="page"><a href='#'>more</a></li>
+				</ul>
+			</div>
+			<div id='chart%id%instrument'>
+			%block
+			</div>
+			<script>
+
+				$('#pagination%id%instrument li').on('click',function(e){
+				    e.preventDefault();
+				    var tag = $(this);
+					 
+				    text = tag.text();
+				    console.log(text);
+				    pagenumber = 0;
+				    if(text=='this week')
+				    {
+				    	pagenumber = 0;
+				    }
+				    else if(text == 'more')
+				    {
+						window.open('/lstm/lstmhistory?instrument=%instrument', '_blank'); 				    
+				    }
+				    else
+				    {
+				    	pagenumber = text.substring(0, 1);
+				    }
+				    
+				    if(text!='more')
+				    {
+					    $.ajax({url: "/lstm/lstmchart?pagenumber="+pagenumber+'&instrument=%instrument', success: function(result){
+					    		if(result!='')
+					    		{
+						    		$("#chart%id%instrument").empty();
+						    		$("#chart%id%instrument").append(result);
+						        	$('#pagination%id%instrument .page').removeClass('active')
+					    			tag.addClass('active')
+					        	}
+			
+					    }});
+				    }
+		
+				});
+			</script>
+		</div>
+		'''
+	tab = tab.replace('%id',str(n))
+	tab = tab.replace('%instrument',instrument)
+	# insert the lstm chart into a html tab element
+	tab = tab.replace('%block',block)
+	tab = tab.replace('%display',display)
+	return tab
+	
+def htmlchart(n,today,instrument):
+	# display a lstm chart starting from Monday 00:00:01 to Friday 23:59:59
+	# n: how many weeks you want to skip backward
+	monday = today + timedelta(days=-today.weekday(), weeks=-n)
+	friday = monday + timedelta(days=+4)
+	# push the time to the very beginning and ending of the day
+	start = datetime.combine(monday, datetime.min.time())
+	end = datetime.combine(friday, datetime.max.time())
+	# call getpair function to retrive historical data
+	# need to retrieve data 4 days before the start date because we need some previous data to calculate moving average
+	df = getpair.getlstmdata(instrument,start-timedelta(days=+4),end)
+	
+	# sort data by date (past to present)
+	df = df.sort_values(['time'], ascending=[True])
+	# calculate a moving average of predicted value using 100 values interval and sliding one by one from the first to last values (calculate mean only rolling period contains 100 values)
+	df['ma'] = df['predicted_value'].rolling(100, min_periods=100).mean()
+	# get mu from the database. mu means the average of total predictive values of particular instrument
+	mean = connecttodb.selectlstmmeanbyinstrument(instrument)
+	df['mean'] = mean
+	df['ma'] = df['ma'].fillna(0)
+	# find min and max values to define a y axis range
+	maxlstm = df['ma'].max()
+	minlstm = df['ma'].min() 
+	maxlstm = maxlstm + abs((maxlstm-minlstm)*0.1)
+	minlstm = minlstm - abs((minlstm-minlstm)*0.1)
+	
+	maxvalue = df['actual_value'].max()
+	minvalue = df['actual_value'].min() 
+	maxvalue = maxvalue + abs((maxvalue-minvalue)*0.1)
+	minvalue= minvalue - abs((minvalue-minvalue)*0.1)
+
+	# remove data before the start point
+	df = df[df['time']>=start.timestamp()]
+	cross = []
+	# finding buy and sell signal
+	# if the moving average cross up the mean ==> buy signal (1)
+	# if the moving average cross down the mean ==> sell signal (-1)
+	# otherwise ==> do nothing (0)
+	for i in range(len(df)):
+		if df['ma'].iloc[i-1] < mean and df['ma'].iloc[i] > mean and i>0:
+			cross.append(1)
+		elif df['ma'].iloc[i-1] > mean and df['ma'].iloc[i] < mean and i>0:
+			cross.append(-1)
+		else:
+			cross.append(0)
+	df['cross'] = cross
+	
+	# insert all data into the html table
+	if len(df)>0:
+		#block = '<div class="col-sm-4" style="height:400px; padding:5px;">%table</div>'
+		block = '<div style="height:400px; padding:5px;">%table</div>'
+		table = template.getlstmtable()
+		table = table.replace('%id',instrument+str(n))
+		table = table.replace('%serie1',instrument)
+		table = table.replace('%datefrom',str(start.timestamp()))
+		table = table.replace('%dateto',str(end.timestamp()))
+		table = table.replace('%max1',str(maxvalue))
+		table = table.replace('%min1',str(minvalue))
+		table = table.replace('%max2',str(maxlstm))
+		table = table.replace('%min2',str(minlstm))
+
+		d = ['actual_value','ma','mean','crossup','crossdown']
+		for j in range(len(d)):
+			df1 = pandas.DataFrame()
+			if d[j] == 'crossup':
+				df1 = pandas.DataFrame(df[['time','cross','actual_value']])
+				df1 = df1[df1['cross']==1]
+				df1.rename(columns={'time': 'x', 'actual_value': 'y'}, inplace=True)
+			elif d[j] == 'crossdown':
+				df1 = pandas.DataFrame(df[['time','cross','actual_value']])
+				df1 = df1[df1['cross']==-1]
+				df1.rename(columns={'time': 'x', 'actual_value': 'y'}, inplace=True)
+			else:
+				df1 = pandas.DataFrame(df[['time',d[j]]])
+				df1.rename(columns={'time': 'x', d[j]: 'y'}, inplace=True)
+			data1 = df1[['x','y']].to_dict(orient='records')
+			table = table.replace('%data'+str(j),str(data1))
+		block = block.replace('%table',table)
+		return block
+	else:
+		return ''
+	return ''
+	
+@app.route('/lstm/lstmchart', methods=['GET'])
+def lstmchart():
+	# triggered when a user select a weekly option to view a specific period
+	# default week is this week
+	# n: the number of the last n week such as last 2 weeks 
+	n = int(request.args.get('pagenumber'))
+	# instrument: instrument name such as AUD_USD
+	instrument = request.args.get('instrument')
+	today = date.today()
+	# create a chart of selected instrument and display in a week period of the selected nth week.
+	table = htmlchart(n,today,instrument)
+	return table
+
+
+
+
+
+
+
+
+
+
+
+
+
+# lstm sub-system: list view per one instrument
+@app.route('/lstm/lstmhistory', methods=['GET'])
+def lstmhistory():
+	# display a list of lstm history
+	instrument = request.args.get('instrument')
+	body = template.getlstmhistorytemplate()
+	body = body.replace('%instrument',instrument)
+	today = date.today()
+	list = ''
+	for i in range(5):
+		list = list+htmlchartblock(i,today,instrument,display='none')
+	body = body.replace('%chart',list)
+	return body
+	
+@app.route('/lstm/lstmhistory/addpage', methods=['GET'])
+def addpage():
+	# add more 5 history pages to the current lstm history
+	n = int(request.args.get('currentpage'))
+	instrument = request.args.get('instrument')
+	today = date.today()
+	list = ''
+	for i in range(n,n+5):
+		list = list+htmlchartblock(i,today,instrument,display='none')
+	return list
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# cointegration table: users can query cointegration data to display in a table and export a csv file
+@app.route('/cointtable', methods=['GET'])
+def cointtable():
+	# return html cointegration export table template
+	body = template.getcointhistorytemplate()
+	return body
+	
+@app.route('/cointtable/fetch', methods=['GET'])
+def fetch():
+	# fetch data from the database and display in a table
+	if request.args.get('datefrom') == '':
+		return 'datefrom empty'
+	if request.args.get('dateto') == '':
+		return 'dateto empty'
+	instrument1 = request.args.get('instrument1')
+	instrument2 = request.args.get('instrument2')
+	datefrom = datetime.combine(datetime.strptime(request.args.get('datefrom'), "%d/%m/%Y"),datetime.strptime(request.args.get('datefrom'), "%d/%m/%Y").min.time())
+	dateto = datetime.combine(datetime.strptime(request.args.get('dateto'), "%d/%m/%Y"),datetime.strptime(request.args.get('dateto'), "%d/%m/%Y").max.time())
+	cointegrated = request.args.get('cointegrated')
+	'''
+	# example inputs
+	instrument1 = 'EUR_USD'
+	instrument2 = 'AUD_USD'
+	datefrom = datetime.combine(datetime.strptime('05/09/2017', "%d/%m/%Y"),datetime.strptime('05/09/2017', "%d/%m/%Y").min.time())
+	dateto = datetime.combine(datetime.strptime('19/09/2017', "%d/%m/%Y"),datetime.strptime('19/09/2017', "%d/%m/%Y").max.time())
+	cointegrated = 'yes'
+	'''
+	if instrument1 == instrument2:
+		return 'same instrument'
+
+	df = getpair.getpairbydate2(instrument1,instrument2,datefrom,dateto)
+	round1,round2 = [],[]
+	for i in range(len(df)):
+		round1.append(roundtime(df['time_'+instrument1].iloc[i]))
+		round2.append(roundtime(df['time_'+instrument2].iloc[i]))
+	df1 = pandas.DataFrame({'roundtime':round1,instrument1:df[instrument1]})
+	df2 = pandas.DataFrame({'roundtime':round2,instrument2:df[instrument2]})
+	
+	columns = ['id','instrument','time','coint_level','predict','public_url','coeff1','coeff2','hedge_ratio', 'mean', 'std', 'p_value']
+	dfforecast = pandas.DataFrame(connecttodb.selectforecastbydate(instrument1,instrument2,datefrom.strftime('%Y-%m-%d %H:%M:%S'),dateto.strftime('%Y-%m-%d %H:%M:%S')),columns=columns)
+	round3 = []
+	for i in range(len(dfforecast)):
+		round3.append(roundtime(dfforecast['time'].iloc[i]))
+	dfforecast['roundtime'] = round3
+	
+	temp = pandas.merge(df1, df2, how='inner', on=['roundtime'])
+	result = pandas.merge(temp, dfforecast, how='left', on=['roundtime'])
+	result = result.fillna('')
+	if cointegrated == 'yes':
+		result = result[result['coint_level']=='g']
+	elif cointegrated == 'no':
+		result = result[result['coint_level']=='y']
+	
+	print(result)
+	rows = ''
+	for i in range(len(result)):
+		link = ''
+		if result['public_url'].iloc[i] != '':
+			link = "<a href='/coint?id="+str(result['id'].iloc[i])+"' target='_blank'>link</a>"
+		cointegrated = ''
+		if result['coint_level'].iloc[i] == 'g':
+			cointegrated = 'yes'
+		elif result['coint_level'].iloc[i] == 'y':
+			cointegrated = 'no'
+		row = '''
+			<tr>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+			</tr>
+			''' % (result['roundtime'].iloc[i],
+				roundnumber(result[instrument1].iloc[i]),
+				roundnumber(result[instrument2].iloc[i]),
+				cointegrated,
+				roundnumber(result['hedge_ratio'].iloc[i]),
+				roundnumber(result['coeff1'].iloc[i]),
+				roundnumber(result['coeff2'].iloc[i]),
+				roundnumber(result['mean'].iloc[i]),
+				roundnumber(result['std'].iloc[i]),
+				roundnumber(result['p_value'].iloc[i]),
+				link)
+		rows = rows+row
+	if rows == '':
+		return 'empty'
+	return rows
+	
+def roundtime(t):
+	tm = datetime.utcfromtimestamp(t)
+	discard = timedelta(minutes=tm.minute % 15,seconds=tm.second,microseconds=tm.microsecond)
+	tm -= discard
+	if discard >= timedelta(minutes=7,seconds=30):
+		tm += timedelta(minutes=15)
+	return tm
+def roundnumber(num):
+	if num != '':
+		return round(num,4)	
+	else:
+		return ''
+		
+		
+
+
+
+
+# cointegration snapshot: show a snapshot of one cointegration period with corresponding data in table		
+@app.route('/coint', methods=['GET'])
+def coint():
+	id = request.args.get('id')
+
+	body = template.getcointtemplate()
+	values = connecttodb.selectforecastbyid(id)
+	body = body.replace('%chart',values['public_url'])
+	body = body.replace('%instrument1',values['instrument1'])
+	body = body.replace('%instrument2',values['instrument2'])
+	body = body.replace('%datefrom',values['datefrom'].strftime('%Y-%m-%d %H:%M:%S'))
+	body = body.replace('%dateto',values['dateto'].strftime('%Y-%m-%d %H:%M:%S'))
+	body = body.replace('%hedge_ratio',str(values['hedge_ratio']))
+	body = body.replace('%coeff1',str(values['coeff1']))
+	body = body.replace('%coeff2',str(values['coeff2']))
+	body = body.replace('%mean',str(values['mean']))
+	body = body.replace('%std',str(values['std']))
+	body = body.replace('%p_value',str(values['p_value']))
+	body = body.replace('%fxdata',getfxdata(values))
+	return body
+def getfxdata(values):
+	df = getpair.getpairbydate2(values['instrument1'],values['instrument2'],values['datefrom'],values['dateto'])
+	text = ''
+	for i in range(len(df)):
+		template = '''
+			<tr>
+	        <td>%s</td>
+	        <td>%s</td>
+	        <td>%s</td>
+	        <td>%s</td>
+	      </tr>
+			'''
+		template = template % (datetime.utcfromtimestamp(df['time_'+values['instrument1']].iloc[i]).strftime('%Y-%m-%d %H:%M:%S'),
+			str(df[values['instrument1']].iloc[i]),
+			datetime.utcfromtimestamp(df['time_'+values['instrument2']].iloc[i]).strftime('%Y-%m-%d %H:%M:%S'),
+			str(df[values['instrument2']].iloc[i]))
+		text = text+template
+	return text
+		
+		
+		
+		
+		
+		
+		
+# cointegration dashboard: create a dashboard for a summary coint and users can bookmark to create a list  
+
+@app.route('/dashboard', methods=['GET'])
+def dashboard():
+	body = template.getdashboardtemplate()
+
+	today = datetime.today()
+	yesterday = today + timedelta(days=-1)
+	
+	inst = ['AUD_USD','EUR_GBP','EUR_JPY','EUR_USD','GBP_USD','USD_CAD']
+	dict = {}
+	for i in inst:
+		df = getpair.getdatabydate3(i,yesterday,today)
+		df.dropna()
+		dict[i] = df
+		
+	instlist = []
+	t = []
+	for i in inst:
+		for j in inst:
+			if i != j and not(j in t):
+				instlist.append([i,j])
+		t.append(i)
+	print(instlist)
+	display = 'inline'
+	chartlist= ''
+	
+	
+	for i in instlist:
+		
+		instrument1 = i[0]
+		instrument2 = i[1]
+		
+		df1 = dict[i[0]]
+		df2 = dict[i[1]]
+
+		columns = ['id','instrument','time','coint_level','predict','public_url','coeff1','coeff2']
+		dfforecast = pandas.DataFrame(connecttodb.selectforecastbydate(instrument1,instrument2,today.strftime('%Y-%m-%d %H:%M:%S'),yesterday.strftime('%Y-%m-%d %H:%M:%S')),columns=columns)
+		html = createmininvd3chart(i[0]+'_'+i[1],df1,df2,dfforecast,instrument1,instrument2,today.timestamp(),yesterday.timestamp(),display)
+		
+		temp = '''	<li style='display: inline-block;float:left;margin:8px;'>
+							<div id='bookmark_%id' class='marksetting'>
+								<img class='unmark' src="https://storage.googleapis.com/pong-web-material/img/unmark.png"/>
+								<img class='marked' src="https://storage.googleapis.com/pong-web-material/img/mark.png" style="display:none"/>
+							</div>
+
+							<a onclick="showchart('%serie1','%serie2')" style="padding: 0px;height:180px; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);">%chart</a>
+						</li>'''
+		temp = temp.replace('%id',i[0]+'_'+i[1])
+		temp = temp.replace('%serie1',instrument1)
+		temp = temp.replace('%serie2',instrument2)
+		temp = temp.replace('%chart',html)
+		
+		chartlist = chartlist+temp
+
+	body = body.replace('%chartlist',chartlist)
+	return body
+
+def createmininvd3chart(id,df1,df2,dfforecast,instrument1,instrument2,datefrom,dateto,display):
+
+	if len(df1)==0:
+		return ''
+	#df1[instrument1] = savechart.normalise_windows(df1[instrument1],df1[instrument1].iloc[0])
+	df1.rename(columns={'time': 'x', instrument1: 'y'}, inplace=True)
+	data = df1[['x','y']].to_dict(orient='records')
+
+	#df2[instrument2] = savechart.normalise_windows(df2[instrument2],df2[instrument2].iloc[0])
+	df2.rename(columns={'time': 'x', instrument2: 'y'}, inplace=True)
+	data2 = df2[['x','y']].to_dict(orient='records')
+
+	forecastlevel1 = dfforecast[dfforecast['coint_level']=='g']
+	forecastlevel2 = dfforecast[dfforecast['coint_level']=='y']
+	
+	html = '''
+	  <div>
+	  <h5 style="text-align:center; padding:10px; margin:0px; background-color:#0072AC; color:white;">%serie1 & %serie2</h5>
+		<div id="chart%id" class="minichart" style="height:100px; margin:15px; margin-bottom:0px;">
+				<svg></svg>
+		</div>
+	  <div style="margin-left:15px;">%cointegrated</div>
+	  </div>
+	  
+	  <style>
+	   .minichart .tick line {
+		  display: none;
+		}
+		.minichart .nv-y text {
+		  display: none;
+		}
+		.minichart g.nv-axis.nv-x {
+			visibility: hidden;
+		}
+		.minichart g.nv-axis.nv-y1 {
+			visibility: hidden;
+		}
+		.minichart g.nv-axis.nv-y2 {
+			visibility: hidden;
+		}
+		.marksetting {
+			z-index: 10; position:relative; 
+			float:right; 
+			bottom:-165px; 
+			right:10px; 
+			cursor:pointer;
+		}
+	  </style>
+	
+		<script>
+
+			chartdata%id =[
+								{"key": "%serie1", "yAxis": "1", "type": "line", "color": "#21618C", "values": %data1},
+								{"key": "%serie2", "yAxis": "2", "type": "line", "color": "#A9CCE3", "values": %data2}
+								];
+			nv.addGraph(function() {
+			var chart = nv.models.multiChart()
+				.margin({top:0,right:0,bottom:0,left:0});
+			chart.lines1.interactive(false);
+			chart.lines2.interactive(false);
+			chart.showLegend(false);
+			
+	
+			d3.select('#chart%id svg')
+				.datum(chartdata%id)
+				.transition().duration(500)
+				.call(chart);
+			
+			nv.utils.windowResize(chart.update);
+			
+			return chart;
+			});
+			
+			$("#bookmark_%serie1_%serie2").click(function() {
+			    togglebookmark(this);
+			    updatefavouritelist();
+			});		
+			
+			function updatefavouritelist(){
+				$("#favourite").empty();
+				var clone = $("#allchart").find('img.marked.active').parent('div').parent('li').clone();
+
+				clone.find('div.marksetting').click(function() {
+					 updatelist(this);
+					 $(this).parent('li').remove();
+					 
+
+				});
+				$("#favourite").append(clone)
+				$("#allchart").find('img.marked.active').each(function( index ) {
+				  console.log( index + ": " + $( this ).text() );
+				});
+			}
+			function updatelist(tag){
+				console.log('click');
+			  	 id = '#'+$(tag).attr('id');
+			  	 $("#allchart").find('div.marksetting').each(function( index ) {
+				  		if($(this).attr('id') == $(tag).attr('id'))
+				  		{
+				  			togglebookmark(this);
+				  		}
+					});
+			}
+			function togglebookmark(e){
+				 $(e).find('img.unmark').toggle();
+			    var tag = $(e).find('img.marked');
+			    tag.toggle();
+			    if (tag.hasClass('active'))
+			    {
+			    	tag.removeClass('active');
+			    }
+			    else
+			    {
+			    	tag.addClass('active')
+			    }
+			}
+		</script>
+		'''
+	html = html.replace('%id',str(id)+'_'+instrument1+'_'+instrument2)
+	html = html.replace('%datefrom',str(datefrom))
+	html = html.replace('%dateto',str(dateto))
+	html = html.replace('%serie1',instrument1)
+	html = html.replace('%serie2',instrument2)
+	html = html.replace('%data1',str(data))
+	html = html.replace('%data2',str(data2))
+	html = html.replace('%display',display)
+	
+	#test
+	if instrument2 == 'EUR_JPY':
+		html = html.replace('%cointegrated','cointegrated')
+	elif instrument2 == 'GBP_USD':
+		html = html.replace('%cointegrated','possible cointegrated')
+
+	if len(forecastlevel1) > 0:
+		html = html.replace('%cointegrated','cointegrated')
+	elif len(forecastlevel2) > 0:
+		html = html.replace('%cointegrated','possible cointegrated')
+	else:
+		html = html.replace('%cointegrated','')
+
+	return html
+
+
+

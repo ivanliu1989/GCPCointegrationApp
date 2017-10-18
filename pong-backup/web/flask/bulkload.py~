@@ -1,0 +1,45 @@
+import src.lib.bulkloaddata as  bulkloaddata
+import sys
+import pandas
+from oandapyV20 import API
+from oandapyV20.contrib.factories import InstrumentsCandlesFactory
+from google.cloud import datastore
+from datetime import datetime
+from datetime import timedelta 
+import src.lib.cal2 as cal2
+import src.lib.savechart as savechart
+
+def bulkloaddatatoentity(instrument,granularity,datefrom):
+	# load data from aando and put it in a GCP entity
+	# input-params: instrument = type of instrument, granularity = data interval, datefrom = date start to query data
+	# example = bulkloaddatatoentity('AUD_USD','M15','2017-08-07T00:00:00Z')
+	client = datastore.Client()
+
+	df = bulkloaddata.bulkloadlivedatabytime(instrument,granularity,datefrom)
+
+	for i in range(len(df)):
+		key = client.key(instrument)
+		entity = datastore.Entity(key=key)
+		entity['time'] = datetime.strptime(df.iloc[i]['time'][:19], "%Y-%m-%dT%H:%M:%S")
+		entity['closeoutBid'] = df.iloc[i][instrument]
+		client.put(entity)
+		print(df.iloc[i][instrument])
+
+		
+def bulkcoint(instrument1,instrument2,lookback,p_value):
+	
+	cal2.bulkcoint(instrument1,instrument2,lookback,p_value)
+
+#bulkloaddatatoentity('EUR_GBP','M15','2017-08-07T00:00:00Z')
+#bulkcoint('EUR_USD','EUR_GBP',100,0.05)
+#bulkcoint('EUR_JPY','EUR_GBP',100,0.05)
+
+#bulkloaddatatoentity('GBP_USD','M15','2017-08-07T00:00:00Z')
+#bulkloaddatatoentity('AUD_USD','M15','2017-08-07T00:00:00Z')
+#bulkcoint('EUR_USD','GBP_USD',100,0.05)
+#bulkcoint('EUR_USD','AUD_USD',100,0.05)
+#bulkcoint('GBP_USD','AUD_USD',100,0.05)
+
+#bulkloaddatatoentity('USD_CAD','M15','2017-08-07T00:00:00Z')
+bulkcoint('USD_CAD','AUD_USD',100,0.05)
+#bulkcoint('GBP_USD','AUD_USD',100,0.05)

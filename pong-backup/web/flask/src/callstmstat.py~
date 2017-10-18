@@ -1,0 +1,11 @@
+import lib.getpair as getpair
+import lib.connecttodb as connecttodb
+
+def updatestat(kind):
+		df = getpair.getalllstmdata(kind)
+		mu = df['predicted_value'].mean()
+		connecttodb.updatelstmstat(kind,mean)
+		
+updatestat('EUR_USD')
+updatestat('AUD_USD')
+updatestat('GBP_USD')

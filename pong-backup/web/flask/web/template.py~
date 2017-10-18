@@ -1,0 +1,844 @@
+from flask import url_for
+
+'''
+<h3>EUR_JPY & EUR_USD</h3>
+        	<div class="noborder" style="overflow: auto; width: 100%; height: 500px; style='margin:0px'">
+				<div class="noborder" style="width: 40000px;">
+					<figure>
+        			<embed type="image/svg+xml" src="/chart?instrument1=EUR_JPY&instrument2=EUR_USD"/>
+        			</figure>
+        		</div>
+        	</div>
+'''
+body = '''
+	<html>
+	<head>
+	<link rel="stylesheet" type="text/css" href="https://storage.googleapis.com/pong-web-material/css/style.css">
+	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+	<link rel="stylesheet" href="https://cdn.rawgit.com/novus/nvd3/v1.8.1/build/nv.d3.css">
+
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.4/nv.d3.min.css"/>
+  	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+  	<script src="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.4/nv.d3.min.js"></script>
+  	<script src="https://storage.googleapis.com/pong-web-material/js/bootbox.min.js"></script>
+	<style>
+
+		.nvd3 .nv-groups .nv-point {
+		  transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
+		  -moz-transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
+		  -webkit-transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
+		}
+		
+		.nvd3.nv-scatter .nv-groups .nv-point.hover {
+		  stroke-width: 15px;
+		  fill-opacity: .5 !important;
+		  stroke-opacity: .5 !important;
+		}
+		
+		.nvd3.nv-scatter{
+		  stroke-width: 4px;
+		  fill-opacity: .5 !important;
+		  stroke-opacity: .5 !important;
+		}
+		.nv-y2 line {
+		  display:none;
+		}
+
+	</style>
+	</head>
+		<body>
+			<script src="https://d3js.org/d3.v4.min.js"></script>
+			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.4/nv.d3.min.css"/>
+  			<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+  			<script src="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.4/nv.d3.min.js"></script>
+  			
+			<h1 style="text-align:center">%title</h1>
+			<div style='margin-left:150px;'>
+				<ul class="pagination  pagination-sm" id="pagination%id%instrument">
+					<li><a href="/cointtable" target="_blank">cointegration table</a></li>
+				</ul>
+			</div>
+			
+
+        	
+        	<div>%nvd3chart</div>
+			<div class="w3-bar w3-black">%tabnum</div>
+			<div id='tablelist'>%table</div>
+			<script src="https://storage.googleapis.com/pong-web-material/js/jquery-3.2.1.min.js"></script>
+			<script src="https://storage.googleapis.com/pong-web-material/js/script.js"></script>
+		</body>
+	</html>
+	'''
+
+table =   '''
+      <div class='box'>
+	      <table border = "0">
+	         <tr>
+	           <td colspan = "4">%image</td>
+	         </tr>
+		  		<tr>
+	            <td>instrument1</td>
+	            <td>instrument2</td>
+	            <td>from</td>
+	            <td>to</td>
+	         </tr>
+	         <tr>
+	            <td>%ins1</td>
+	            <td>%ins2</td>
+	            <td>%from</td>
+	            <td>%to</td>
+	         </tr>
+		  		<tr>
+	            <td>hedge ratio</td>
+	            <td>p-value</td>
+	            <td>mean</td>
+	            <td>std</td>
+	         </tr>
+	         <tr>
+	            <td>%hedge</td>
+	            <td>%pvalue</td>
+	            <td>%mean</td>
+	            <td>%std</td>
+	         </tr>
+	      </table>
+	      <img id='check%i' onclick="check(this,'%i')" class='rightconner1' src='https://storage.googleapis.com/pong-web-material/%checkstatus-check.png' style='float:right'></img>
+	      <img id='cross%i' onclick="cross(this,'%i')" class='rightconner2' src='https://storage.googleapis.com/pong-web-material/%crossstatus-cross.png' style='float:right'></img>
+	      <div class='leftconner'>%order</div>      
+      </div>
+   '''
+coint =   '''
+      <html>
+	<head>
+	<link rel="stylesheet" type="text/css" href="https://storage.googleapis.com/pong-web-material/css/style.css">
+	<style>
+			.displaytable table {
+			    border-collapse: collapse;
+			    width: 100%;
+			    display:inline-block;
+			    padding: 0px;
+			}
+			.displaytable th {
+			    border: 1px solid #dddddd;
+			    text-align: left;
+			    padding: 5px;
+			    padding-left: 8px;
+			    padding-right: 8px;
+			    font-size: 15px;
+			    font-weight: bold;
+			}
+			.displaytable td {
+			    border: 1px solid #dddddd;
+			    text-align: left;
+			    padding: 5px;
+			    padding-left: 8px;
+			    padding-right: 8px;
+			    font-size: 13px;
+			}
+			.displaytable tr:nth-child(even) {
+			    background-color: #dddddd;
+			}
+		</style>
+	</head>
+		<body style='padding:20px'>
+			<h1>Cointegration</h1>
+			<table  class='displaytable' style='height:400px;'>
+			<col width="100%">
+
+			<tr>
+			<td>
+			<img src='%chart' width='100%'>
+			</td>
+			<td>
+			  <div style='width:480px; height:400px; overflow-y: scroll; padding:5px;'>
+			  <table id="data" class='displaytable'>
+			    <thead>
+			      <tr>
+			        <th>Parameter</th>
+			        <th colspan="3">Value</th>
+			      </tr>
+			    </thead>
+			    <tbody>
+			      <tr>
+			        <td>Instrument 1</td>
+			        <td colspan="3">%instrument1</td>
+			      </tr>
+			      <tr>
+			        <td>Instrument 2</td>
+			        <td colspan="3">%instrument2</td>
+			      </tr>
+			      <tr>
+			        <td>From</td>
+			        <td colspan="3">%datefrom</td>
+			      </tr>
+			      <tr>
+			        <td>To</td>
+			        <td colspan="3">%dateto</td>
+			      </tr>
+			      <tr>
+			        <td>Hedge ratio</td>
+			        <td colspan="3">%hedge_ratio</td>
+			      </tr>
+			      <tr>
+			        <td>Coefficient 1</td>
+			        <td colspan="3">%coeff1</td>
+			      </tr>
+			      <tr>
+			        <td>Coefficient 2</td>
+			        <td colspan="3">%coeff2</td>
+			      </tr>
+			      <tr>
+			        <td>Mean</td>
+			        <td colspan="3">%mean</td>
+			      </tr>
+			      <tr>
+			        <td>Standard deviation</td>
+			        <td colspan="3">%std</td>
+			      </tr>
+			      <tr>
+			        <td>P-value</td>
+			        <td colspan="3">%p_value</td>
+			      </tr>
+			    </tbody>
+			    
+			    <thead>
+			      <tr>
+			        <th colspan="4">Data</th>
+			      </tr>
+			    </thead>
+			      <tr>
+			        <th>Date</th>
+			        <th>%instrument1</th>
+			        <th>Date</th>
+			        <th>%instrument2</th>
+			      </tr>
+			    </thead>
+			    <tbody>
+			    	%fxdata
+			    </tbody>
+			  </table>
+			  </div>
+			  <div style='padding:5px;'><button id='export' onclick="exportfile()">export</button></div>
+			  </td>
+			  </tr>
+			</table>
+			<script src="https://storage.googleapis.com/pong-web-material/js/jquery-3.2.1.min.js"></script>
+			<script src="https://storage.googleapis.com/pong-web-material/js/FileSaver.min.js"></script>
+			<script src="https://storage.googleapis.com/pong-web-material/js/tableexport.min.js"></script>
+			<script type="text/javascript">
+			 var tableId = 'data';
+		    var ExportButtons = document.getElementById(tableId);
+		    var instance = new TableExport(ExportButtons, {
+		        formats: ['xls', 'csv'],
+		        exportButtons: false
+		    });
+		    var CSV = instance.CONSTANTS.FORMAT.CSV;
+		    var exportDataCSV = instance.getExportData()[tableId][CSV];
+		    var bytesCSV = instance.getFileSize(exportDataCSV.data, exportDataCSV.fileExtension);
+		    
+			function exportfile() {
+					instance.export2file(exportDataCSV.data, exportDataCSV.mimeType, exportDataCSV.filename, exportDataCSV.fileExtension);
+				}
+				 
+			</script>
+		</body>
+	</html>
+   '''
+      
+lstm =   '''
+<html>
+	<head>
+	<link rel="stylesheet" type="text/css" href="https://storage.googleapis.com/pong-web-material/css/style.css">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+	<link rel="stylesheet" href="https://cdn.rawgit.com/novus/nvd3/v1.8.1/build/nv.d3.css">
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.4/nv.d3.min.css"/>
+  	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+  	<script src="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.4/nv.d3.min.js"></script>
+  	<style>
+
+		.nv-y2 line {
+		  display:none;
+		}
+
+	</style>
+	</head>
+		<body style='padding:20px'>
+			<h1 style='text-align:center;'>LSTM buy & sell signal detection</h1>
+			<div class="row">
+		    %chart
+		  </div>
+		</body>
+	</html>
+   '''
+lstmhistory =   '''
+<html>
+	<head>
+	<link rel="stylesheet" type="text/css" href="https://storage.googleapis.com/pong-web-material/css/style.css">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+	<link rel="stylesheet" href="https://cdn.rawgit.com/novus/nvd3/v1.8.1/build/nv.d3.css">
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.4/nv.d3.min.css"/>
+  	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+  	<script src="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.4/nv.d3.min.js"></script>
+  	<style>
+
+		.nv-y2 line {
+		  display:none;
+		}
+
+	</style>
+	</head>
+		<body style='padding:20px'>
+			<h1 style='text-align:center;'>LSTM buy & sell signal history</h1>
+			<div class="row" id="chartlist">
+		    %chart
+		  </div>
+		  <div style='height:20px; text-align:center;'>
+				<ul class="pagination  pagination-sm" >
+					<li class="page"><a id="pagination" href="javascript:void(0)">view more</a></li>
+				</ul>
+		  </div>
+		  <script>
+			 currentpage = 5;
+	   	 $("#pagination").click(function() {
+	   	 	  if($(this).text() == 'view more')
+	   	 	  {
+					  $(this).text('loading')
+					  $.ajax({url: "/lstm/lstmhistory/addpage?currentpage="+currentpage+"&instrument=%instrument", success: function(result){
+					    		if(result!='')
+					    		{
+									$("#chartlist").append(result);
+									currentpage = currentpage+5;
+									$("#pagination").text('view more')
+
+					        	}
+					        	else
+					        	{
+					        		$("#pagination").text('view more')
+					        	}
+					    },
+					    error: function(xhr, textStatus, errorThrown){
+					       $("#pagination").text('view more')
+					    }
+					    });
+				  }
+				});
+
+		  </script>
+		</body>
+	</html>
+   '''
+lstmtable = '''
+	  <div>
+		  <h4 style="text-align:center">%serie1</h4>
+			<div id="chart%id" style='height:400px;'>
+					<svg></svg>
+			</div>
+	  </div>
+
+	<script>
+
+		chartdata%id =[{"key": "%serie1", "yAxis": "1", "type": "line", "values": %data0},
+							{"key": "prediction", "yAxis": "2", "type": "line", "values": %data1},
+							{"key": "mean", "yAxis": "2", "type": "line", "color": "rgba(255, 105, 105, 0.6)", "values": %data2},
+							{"key": "sell", "yAxis": "1", "type": "scatter", "values": %data3},
+							{"key": "buy", "yAxis": "1", "type": "scatter", "values": %data4}];
+
+		
+		HEIGHT = 300;
+		MARGINS = {
+		top: 0,
+		right: 150,
+		bottom: 0,
+		left: 150
+		 };
+		
+		nv.addGraph(function() {
+		var chart = nv.models.multiChart()
+			.margin({top:MARGINS.top,right:MARGINS.right,bottom:MARGINS.bottom,left:MARGINS.left})
+        	.height(HEIGHT);;   
+      
+      chart.xAxis.tickFormat(function(d) { 
+					return d3.time.format.utc('%Y-%m-%d')(new Date(d*1000));        
+	     });
+
+		chart.yDomain1([%min1,%max1]);
+		chart.yDomain2([%min2,%max2]);
+      
+      chart.lines1.xDomain([new Date(%datefrom), new Date(%dateto)])
+      chart.lines2.xDomain([new Date(%datefrom), new Date(%dateto)])
+
+		chart.scatters1.xDomain([new Date(%datefrom), new Date(%dateto)])
+
+ 
+
+		chart.yAxis1
+			.tickFormat(d3.format(',.4f'));
+			
+		chart.yAxis2
+			.tickFormat(d3.format(',.4f'));
+		
+		chart.tooltip.contentGenerator(function (d) {
+	        //return "<img src='https://storage.googleapis.com/pong-cointegration/DE30_EUR_EUR_JPY_2017-08-30%2000%3A00%3A08' width='600'>";}); 	
+				 x = d.value
+				 y = '';
+				 value = '';
+	          d.series.forEach(function(elem){
+	          	y = elem.key;
+	          	value = elem.value;
+	          })
+
+				return "<div style='padding:3px;'><div><b>"+d3.time.format.utc('%Y-%m-%d %H:%M:%S')(new Date(x*1000))+"</b></div>"+"<div>"+d3.format(',.4f')(value)+"</div></div>";        	
+
+          }); 	
+
+		d3.select('#chart%id svg')
+			.datum(chartdata%id)
+			.transition().duration(500)
+			.call(chart);
+		
+		
+		//add buy or sell label
+			
+		d3.selectAll("#chart%id svg .nv-group path")[0].forEach(function(d){
+			      var tf = d3.select(d).attr("transform")
+			      t = d3.transform(tf).translate;
+			      t[0] = t[0] + 10;//moving the translate x by 5 pixel.
+			      key = d3.select(d.parentNode).data()[0].key;
+			      
+			      if ((key == 'buy' || key == 'sell') && d3.select('#chart%id svg').data()[0][0].key == "%serie1")
+			      {
+			      	//console.log(d3.select('#chart%id svg').data()[0][0].key);
+			      	//console.log(d3.select(d.parentNode).data()[0].values[0].y+'_'+d3.select(d.parentNode).data()[0].values[0].x);
+			      	d3.select(d.parentNode)
+			        .append("text")
+			        .attr("class", "label")
+			        .style("font-size", "25px")
+			        .text(key)//putting data
+			        .attr("transform", "translate("+t[0]+","+t[1]+")");
+			      }
+			});
+		
+		nv.utils.windowResize(function(){
+			chart.update();
+		});
+		
+		var resizeTimer;
+
+		$(window).on('resize', function(e) {
+		
+		  clearTimeout(resizeTimer);
+		  resizeTimer = setTimeout(function() {
+		
+		    d3.selectAll("#chart%id svg .nv-group path")[0].forEach(function(d){
+				      var tf = d3.select(d).attr("transform")
+				      t = d3.transform(tf).translate;
+				      t[0] = t[0] + 10;//moving the translate x by 5 pixel.
+				      key = d3.select(d.parentNode).data()[0].key;
+				      
+				      if ((key == 'buy' || key == 'sell') && d3.select('#chart%id svg').data()[0][0].key == "%serie1")
+				      {
+				      	console.log(d3.select("text").attr('transform'));
+				      	//console.log(d3.select(d.parentNode).data()[0].values[0].y+'_'+d3.select(d.parentNode).data()[0].values[0].x);
+				      	d3.select(d.parentNode).select("text").attr("transform", "translate("+t[0]+","+t[1]+")");
+				      }
+				});
+		            
+		  }, 500);
+		
+		});
+		
+		
+		return chart;
+		});
+		
+	</script>
+	'''
+	
+cointhistory = '''
+	<html>
+		<head>
+		<style>
+			.displaytable table {
+			    border-collapse: collapse;
+			    width: 100%;
+			    display:inline-block;
+			    padding: 10px;
+			}
+			.displaytable th {
+			    border: 1px solid #dddddd;
+			    text-align: left;
+			    padding: 5px;
+			    padding-left: 8px;
+			    padding-right: 8px;
+			    font-size: 18px;
+			    font-weight: bold;
+			}
+			.displaytable td {
+			    border: 1px solid #dddddd;
+			    text-align: left;
+			    padding: 5px;
+			    padding-left: 8px;
+			    padding-right: 8px;
+			    font-size: 15px;
+			}
+			.displaytable tr:nth-child(even) {
+			    background-color: #dddddd;
+			}
+		</style>
+		<link rel="stylesheet" type="text/css" href="https://storage.googleapis.com/pong-web-material/css/style.css">
+		<!-- Include Bootstrap Datepicker -->
+			<link rel="stylesheet" type="text/css" media="screen" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+			<link href="//cdn.rawgit.com/Eonasdan/bootstrap-datetimepicker/e8bddc60e73c1ec2475f827be36e1957af72e2ea/build/css/bootstrap-datetimepicker.css" rel="stylesheet">
+			<script async="" src="//www.google-analytics.com/analytics.js"></script><script type="text/javascript" src="//code.jquery.com/jquery-2.1.1.min.js"></script>
+			<script type="text/javascript" src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+			<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment-with-locales.js"></script>
+			<script src="//cdn.rawgit.com/Eonasdan/bootstrap-datetimepicker/e8bddc60e73c1ec2475f827be36e1957af72e2ea/src/js/bootstrap-datetimepicker.js"></script>
+
+			<script src="https://storage.googleapis.com/pong-web-material/js/FileSaver.min.js"></script>
+			<script src="https://storage.googleapis.com/pong-web-material/js/tableexport.min.js"></script>
+		</head>
+			<body>
+			  
+			<h1 style="text-align:center">Cointegration table</h1>
+			<div style="text-align:center">
+			  <div style='display:inline-block;vertical-align: top;padding:10px;'>
+			      <div style='color:gray; padding:3px; text-align:left;'>instrument 1</div>
+			      <div>
+			        <select id='instrument1' style="padding:7px; border-radius:3px;">
+			          <option>EUR_USD</option>
+			          <option>EUR_JPY</option>
+			          <option>EUR_GBP</option>
+			          <option>USD_CAD</option>
+			          <option>GBP_USD</option>
+			          <option>AUD_USD</option>
+			        </select>
+			      </div>
+			  </div>
+			
+			  <div style='display:inline-block;vertical-align: top;padding:10px;'>
+			    <div style='color:gray; padding:3px; text-align:left;'>instrument 2</div>
+			    <div>
+			      <select id='instrument2' style="padding:7px; border-radius:3px;">
+			        <option>EUR_USD</option>
+			        <option>EUR_JPY</option>
+			        <option>EUR_GBP</option>
+			        <option>USD_CAD</option>
+			        <option>GBP_USD</option>
+			        <option>AUD_USD</option>
+			      </select>
+			    </div>
+			  </div>
+			  
+			
+			  <div style='display:inline-block;vertical-align: top;padding:10px;'>
+			    <div style='color:gray; padding:3px; text-align:left;'>from</div>
+			      <div class='input-group date' id='datetimepicker6' style='width:200px;'>
+			        <input  id='datefrom' type='text' class="form-control" />
+			        <span class="input-group-addon">
+			        <span class="glyphicon glyphicon-calendar"></span>
+			      	</span>
+			    </div>
+			  </div>
+			  <div style='display:inline-block;vertical-align: top;padding:10px;'>
+			    <div style='color:gray; padding:3px; text-align:left;'>to</div>
+			      <div class='input-group date' id='datetimepicker7' style='width:200px;'>
+			      <input id='dateto' type='text' class="form-control" />
+			      <span class="input-group-addon">
+			      <span class="glyphicon glyphicon-calendar"></span>
+			      </span>
+			    </div>
+			  </div>
+			  
+			  <div style='display:inline-block;vertical-align: top;padding:10px;'>
+			    <div style='color:gray; padding:3px; text-align:left;'>cointegrated</div>
+			    <div>
+			      <select id='cointegrated' style="padding:7px; border-radius:3px;">
+			        <option></option>
+			        <option>yes</option>
+			        <option>no</option>
+			      </select>
+			    </div>
+			  </div>
+			  
+			  <div style='display:inline-block;vertical-align: bottom;padding:10px;'><button id='viewcoint' style="border-radius:0px; padding:5px; width:100px;">view</button></div>
+			  <div style='display:inline-block;vertical-align: bottom;padding:10px;'><button id='exportcoint' style="border-radius:0px; padding:5px; width:100px;">export</button></div>
+			  <br>			  
+			  <div style='display:inline-block;'>
+			  	<table class='displaytable' id='cointhistory'>
+			  	<thead>
+			  		<tr>
+			  			<th>datetime</th>
+			  			<th id='instrumentheader1'>instrument1</th>
+			  			<th id='instrumentheader2'>instrument2</th>
+			  			<th>cointegrated</th>
+			  			<th>hedge ratio</th>
+			  			<th>coefficient 1</th>
+			  			<th>coefficient 2</th>
+			  			<th>mean</th>
+			  			<th>standard deviation</th>
+			  			<th>p-value</th>
+			  			<th>link</th>
+			  		</tr>
+			  	</thead>
+			  	<tbody>
+			  	</tbody>
+			  	</table>
+			  </div>
+			</div>
+			        
+			
+			
+			<script type="text/javascript">
+			    $(function () {
+			        $('#datetimepicker6').datetimepicker({format: 'DD/MM/YYYY'});
+			        $('#datetimepicker7').datetimepicker({
+			        		format: 'DD/MM/YYYY',
+			            useCurrent: false //Important! See issue #1075
+			        });
+			        $("#datetimepicker6").on("dp.change", function (e) {
+			            $('#datetimepicker7').data("DateTimePicker").minDate(e.date);
+			        });
+			        $("#datetimepicker7").on("dp.change", function (e) {
+			            $('#datetimepicker6').data("DateTimePicker").maxDate(e.date);
+			        });
+			    });
+			    
+			    $('#viewcoint').click(function() {
+			    	$.ajax({url: "/cointtable/fetch?instrument1="+$("#instrument1 option:selected").text()+"&instrument2="+$("#instrument2 option:selected").text()+"&datefrom="+$('#datefrom').val()+"&dateto="+$('#dateto').val()+"&cointegrated="+$("#cointegrated option:selected").text(), success: function(result){
+							if(result == 'same instrument')
+							{
+								alert('Instrument 1 cannot be the same to instrument 2!')							
+							}
+							else if(result == 'empty')
+							{
+								alert('Empty result')							
+							}
+							else if(result == 'datefrom empty')
+							{
+								alert('Please select date from.')							
+							}
+							else if(result == 'dateto empty')
+							{
+								alert('Please select date to.')							
+							}
+							else
+							{
+								$('#instrumentheader1').text($("#instrument1 option:selected").text());
+								$('#instrumentheader2').text($("#instrument2 option:selected").text());
+						    	$('#cointhistory tbody').empty();
+						   	$('#cointhistory tbody').append(result);
+					   	}
+		
+				    }});
+			    		
+					});
+			    
+				$('#exportcoint').click(function() {
+						 var tableId = 'cointhistory';
+					    var ExportButtons = document.getElementById(tableId);
+					    var instance = new TableExport(ExportButtons, {
+					        formats: ['xls', 'csv'],
+					        exportButtons: false
+					    });
+					    var CSV = instance.CONSTANTS.FORMAT.CSV;
+					    var exportDataCSV = instance.getExportData()[tableId][CSV];
+					    var bytesCSV = instance.getFileSize(exportDataCSV.data, exportDataCSV.fileExtension);
+						 instance.export2file(exportDataCSV.data, exportDataCSV.mimeType, exportDataCSV.filename, exportDataCSV.fileExtension);
+					});
+			</script>
+				
+			</body>
+	</html>
+	'''
+dashboardtemplate = '''
+<html>
+	<head>
+			<link rel="stylesheet" type="text/css" href="https://storage.googleapis.com/pong-web-material/css/style.css">
+			<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+			<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+			<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+			<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+			<link rel="stylesheet" href="https://cdn.rawgit.com/novus/nvd3/v1.8.1/build/nv.d3.css">
+			<script src="https://d3js.org/d3.v4.min.js"></script>
+			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.4/nv.d3.min.css">
+		  	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+		  	<script src="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.4/nv.d3.min.js"></script>
+		  	<script src="https://storage.googleapis.com/pong-web-material/js/bootbox.min.js"></script>
+  			
+			<style>
+		
+				.nvd3 .nv-groups .nv-point {
+				  transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
+				  -moz-transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
+				  -webkit-transition: stroke-width 250ms linear, stroke-opacity 250ms linear;
+				}
+				
+				.nvd3.nv-scatter .nv-groups .nv-point.hover {
+				  stroke-width: 15px;
+				  fill-opacity: .5 !important;
+				  stroke-opacity: .5 !important;
+				}
+				
+				.nvd3.nv-scatter{
+				  stroke-width: 4px;
+				  fill-opacity: .5 !important;
+				  stroke-opacity: .5 !important;
+				}
+				.nv-y2 line {
+				  display:none;
+				}
+			</style>
+		  	<style>
+		  	.mybootbox .modal-dialog{
+			    width:1400px;
+			}
+		  	</style>
+		</head>
+			<body style="padding:0px;margin-left:50px;margin-right:50px;">
+				<h1 style="text-align:center; color:white; background-color:#004165; padding:20px; margin:0px;">Cointegration dashboard</h1>
+				<div class="row">
+						<ul class="pagination  pagination-sm" id="favourite" style="width:100%;">
+						</ul>
+			  	</div>
+				<div class="row">
+				    <div style="text-align:left;margin-left:7px;">
+						<ul class="pagination  pagination-sm" id="pagination">
+							<li id="viewall" class="page active"><a href="#">VIEW ALL</a></li>
+							<li class="page"><a href="#">AUD_USD</a></li>
+							<li class="page"><a href="#">EUR_GBP</a></li>
+							<li class="page"><a href="#">EUR_JPY</a></li>
+							<li class="page"><a href="#">EUR_USD</a></li>
+							<li class="page"><a href="#">GBP_USD</a></li>
+							<li class="page"><a href="#">USD_CAD</a></li>
+						</ul>
+					</div>
+			         </div>
+				<div class="row" style='margin-top:0px;padding-top:0px;'>
+						<ul class="pagination  pagination-sm" id="allchart" style="width:100%;margin-top:0px;padding:0px;">
+							%chartlist
+						</ul>
+			  	</div>
+			<script>
+		   function showchart(instrument1,instrument2){
+		   	
+		   	bootbox.alert({
+							      "message": "<div id='chartdemo'><div>loading data...</div></div>",
+							      "className" : "mybootbox",
+							      "callback": function() {
+
+							      }
+							  });
+	
+		   	$.ajax({url: "/getdemochart?instrument1="+instrument1+"&instrument2="+instrument2, success: function(result){
+				    		if(result!='')
+				    		{
+				    			$('#chartdemo').empty();
+				    			$('#chartdemo').append("<div>"+result+"</div><div style='margin-left:50px; padding:0px;'><a href='/cointtable' target='_blank'>cointegration table</a></div>");
+				        	}
+				        	else
+				        	{
+				        		$('#chartdemo').empty();
+				    			$('#chartdemo').append('<div>no data</div>');
+				        	}
+		
+				    }});
+		   	
+		   }
+		   </script>
+			<script>
+			var evenWidth = $("#favourite").width()/5;
+                        if (evenWidth < 300)
+                        {evenWidth = 300}
+			$("#favourite li").css("width", evenWidth-20);
+			$("#allchart li").css("width", evenWidth-20);
+
+				$('#pagination li').on('click',function(e){
+				    e.preventDefault();
+				    var tag = $(this);
+				    text = tag.text();
+				    
+				    $('#pagination .page').removeClass('active');
+				    tag.addClass('active');
+				    if(text == 'VIEW ALL')
+				    {
+				    	$("#allchart").find('li').show();
+				    }
+				    else
+				    {
+				    	console.log(text);
+				    	$("#allchart").find('div.marksetting').each(function( index ) {
+				    		
+					  		if($(this).attr('id').indexOf(text) == -1)
+					  		{
+					  			$(this).parent('li').hide();
+					  		}
+					  		else
+					  		{
+					  			$(this).parent('li').show();
+					  		}
+						});
+				    }
+				    
+				    /*
+				    if (tag.hasClass('active'))
+				    {
+				    	tag.removeClass('active')
+				    }
+				    else
+				    {
+				    	if(text == 'VIEW ALL')
+				    	{
+				    		$('#pagination .page').removeClass('active')
+				    	}
+				    	else
+				    	{
+				    		$("#viewall").removeClass('active')
+				    	}
+				    	tag.addClass('active')
+				    }
+				    */
+		
+				});
+				
+			</script>
+	
+	
+	</body>
+	</html>
+	'''
+
+
+def getbodytemplate():
+	return body
+	
+def gettabletemplate():
+	return table
+	
+def getcointtemplate():
+	return coint
+	
+def getcointhistorytemplate():
+	return cointhistory
+	
+def getlstmtemplate():
+	return lstm
+	
+def getlstmhistorytemplate():
+	return lstmhistory
+	
+def getlstmtable():
+	return lstmtable
+def getdashboardtemplate():
+	return dashboardtemplate	
+	

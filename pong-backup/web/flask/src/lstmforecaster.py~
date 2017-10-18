@@ -1,0 +1,10 @@
+import lstmforecast
+
+lstmforecast.predict('EUR_USD',1)
+lstmforecast.predict('AUD_USD',1)
+lstmforecast.predict('GBP_USD',1)
+
+#  1 year
+#lstmforecast.bulkpredict('EUR_USD','M15',530000)
+#lstmforecast.bulkpredict('AUD_USD','M15',530000)
+#lstmforecast.bulkpredict('GBP_USD','M15',530000)

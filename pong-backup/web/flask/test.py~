@@ -1,0 +1,43 @@
+from flask import Flask, request, url_for, Response
+import re
+import web.template as template
+import src.lib.connecttodb as connecttodb
+import src.lib.getpair as getpair
+import src.lib.savechart as savechart
+import pygal
+from pygal.style import DarkStyle
+from datetime import datetime
+import pandas
+import numpy as np
+from datetime import date
+from datetime import timedelta
+
+import flaskapp as app
+
+#app.fetch()
+#app.lstm()
+#connecttodb.savefile2()
+'''
+instrument1 = 'EUR_USD'
+instrument2 = 'EUR_GBP'
+datefrom = datetime.combine(datetime.strptime('15/09/2017', "%d/%m/%Y"),datetime.strptime('15/09/2017', "%d/%m/%Y").min.time())
+dateto = datetime.combine(datetime.strptime('19/09/2017', "%d/%m/%Y"),datetime.strptime('19/09/2017', "%d/%m/%Y").max.time())
+df = getpair.getpairbydate2(instrument1,instrument2,datefrom,dateto)
+
+for i in range(len(df)):
+	tm = datetime.utcfromtimestamp(df['time_'+instrument1].iloc[i])
+	discard = timedelta(minutes=tm.minute % 15,seconds=tm.second,microseconds=tm.microsecond)
+	#tm = tm - timedelta(minutes=tm.minute % 15,seconds=tm.second,microseconds=tm.microsecond)
+	tm -= discard
+	if discard >= timedelta(minutes=7,seconds=30):
+		tm += timedelta(minutes=15)
+	print(datetime.utcfromtimestamp(df['time_'+instrument1].iloc[i]))
+	print(tm)
+	print('...')
+'''
+
+import src.lstmforecast as lstmforecast
+
+lstmforecast.predict('EUR_USD',300)
+lstmforecast.predict('AUD_USD',300)
+lstmforecast.predict('GBP_USD',300)
